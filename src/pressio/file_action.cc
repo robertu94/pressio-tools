@@ -16,7 +16,7 @@ FileAction to_binary(std::string const& filename) {
   return [filename](pressio_data* file) {
     auto rc = pressio_io_data_path_write(file, filename.c_str());
     if (rc) return ActionResult();
-    else return ActionResult("failed to save HDF file "s + filename);
+    else return ActionResult("failed to save file "s + filename);
   };
 }
 

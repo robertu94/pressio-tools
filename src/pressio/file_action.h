@@ -3,10 +3,10 @@
 
 struct ActionResult {
   int err_code{0};
-  std::string err_msg{};
+  std::string err_msg;
   ActionResult(): err_code(0), err_msg() {}
   ActionResult(std::string const& err_msg): err_code(1), err_msg(err_msg) {}
-  operator bool() { return err_code == 0; }
+  operator bool() { return err_code != 0; }
 };
 
 using FileAction = std::function<ActionResult(pressio_data*)>;

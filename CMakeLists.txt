@@ -12,10 +12,12 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     "MinSizeRel" "RelWithDebInfo")
 endif()
 
-enable_testing()
+include(CTest)
+include(GNUInstallDirs)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+find_package(Boost REQUIRED)
 find_package(LibPressio REQUIRED)
 find_package(SZ REQUIRED)
 find_package(zfp REQUIRED)
@@ -24,9 +26,12 @@ find_package(MGARD REQUIRED)
 find_package(PkgConfig)
 pkg_search_module(ZSTD IMPORTED_TARGET GLOBAL libzstd)
 pkg_search_module(FFTW3 IMPORTED_TARGET GLOBAL fftw3)
+pkg_search_module(BLOSC IMPORTED_TARGET GLOBAL blosc)
+pkg_search_module(Magick++ IMPORTED_TARGET GLOBAL Magick++)
 
 add_library(utils INTERFACE)
 target_include_directories(utils INTERFACE include/)
 
 add_subdirectory(src/pressio)
+add_subdirectory(src/pressio_batch)
 add_subdirectory(test)

@@ -1,0 +1,14 @@
+{
+  "CLOUDf48.bin.f32" : {
+    "path": "/home/runderwood/anl/autotuning/code/data/hurricane/100x500x500/CLOUDf48.bin.f32",
+    "type": "raw",
+    "dtype": "float",
+    "dims": [ 500, 500, 100 ]
+  },
+  "PRECIPf48.bin.f32" : {
+    "path": "/home/runderwood/anl/autotuning/code/data/hurricane/100x500x500/PRECIPf48.bin.f32",
+    "type": "raw",
+    "dtype": "float",
+    "dims": [ 500, 500, 100 ]
+  }
+}

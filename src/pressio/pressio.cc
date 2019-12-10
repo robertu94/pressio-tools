@@ -145,7 +145,7 @@ main(int argc, char* argv[])
     if (opts.actions.find(Action::Compress) != opts.actions.end()) {
       compressed = compress(compressor, opts);
       if (auto result = opts.compressed_file_action(compressed)) {
-        std::cerr << result.err_msg << std::endl;
+        std::cerr << "writing file failed " << result.err_msg << std::endl;
         exit(EXIT_FAILURE);
       }
     } else if (opts.actions.find(Action::Decompress) != opts.actions.end()) {
@@ -177,10 +177,11 @@ main(int argc, char* argv[])
     pressio_data_free(decompressed);
     pressio_metrics_free(metrics);
     pressio_options_free(options);
+    pressio_compressor_release(compressor);
   }
 
   pressio_data_free(opts.input);
 
-
+  pressio_release(pressio);
   return 0;
 }

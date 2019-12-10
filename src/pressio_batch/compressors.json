@@ -1,0 +1,44 @@
+{
+  "sz_abs_1e6": {
+    "compressor_id":"sz",
+    "options":{
+      "sz:abs_err_bound":"1e-6",
+      "sz:error_bound_mode":"0"
+    }
+  },
+  "sz_abs_1e5": {
+    "compressor_id":"sz",
+    "options":{
+      "sz:abs_err_bound":"1e-5",
+      "sz:error_bound_mode":"0"
+    }
+  },
+  "sz_abs_1e4": {
+    "compressor_id":"sz",
+    "options":{
+      "sz:abs_err_bound":"1e-4",
+      "sz:error_bound_mode":"0"
+    }
+  },
+  "sz_pw_rel_1e6": {
+    "compressor_id":"sz",
+    "options":{
+      "sz:pw_rel_err_bound":"1e-6",
+      "sz:error_bound_mode":"10"
+    }
+  },
+  "sz_pw_rel_1e5": {
+    "compressor_id":"sz",
+    "options":{
+      "sz:pw_rel_err_bound":"1e-5",
+      "sz:error_bound_mode":"10"
+    }
+  },
+  "sz_pw_rel_1e4": {
+    "compressor_id":"sz",
+    "options":{
+      "sz:pw_rel_err_bound":"1e-4",
+      "sz:error_bound_mode":"10"
+    }
+  }
+}
