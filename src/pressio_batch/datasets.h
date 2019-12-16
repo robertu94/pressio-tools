@@ -1,3 +1,4 @@
+#pragma once
 #include <memory>
 #include <vector>
 #include <string>
@@ -14,4 +15,4 @@ struct dataset {
   std::string name;
 };
 
-std::vector<std::unique_ptr<dataset>> load_datasets(std::string const& dataset_config_path);
+std::vector<std::unique_ptr<dataset>> load_datasets(std::string const& dataset_config_path, bool verbose = false);

@@ -1,3 +1,4 @@
+#pragma once
 #include <memory>
 #include <vector>
 #include <string>
@@ -11,4 +12,4 @@ struct compressor_config {
   virtual std::string const& get_name()=0;
 };
 
-std::vector<std::unique_ptr<compressor_config>> load_compressors(std::string const& dataset_config_path);
+std::vector<std::unique_ptr<compressor_config>> load_compressors(std::string const& dataset_config_path, bool verbose = false);

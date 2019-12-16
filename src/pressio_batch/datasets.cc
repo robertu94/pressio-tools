@@ -46,14 +46,14 @@ pressio_dtype to_pressio_dtype(std::string const& name) {
 }
 
 
-std::vector<std::unique_ptr<dataset>> load_datasets(std::string const& dataset_config_path) {
+std::vector<std::unique_ptr<dataset>> load_datasets(std::string const& dataset_config_path, bool verbose) {
   std::vector<std::unique_ptr<dataset>> datasets;
   pt::ptree dataset_tree;
   pt::read_json(dataset_config_path, dataset_tree);
   for (auto& [name, dataset_config] : dataset_tree) {
     auto type = dataset_config.get<std::string>("type");
     if(type == "raw") {
-      std::clog << "loading raw dataset" << name << std::endl;
+      if(verbose) std::clog << "loading raw dataset" << name << std::endl;
       auto file_dataset = std::make_unique<file_dataset_t>(name);
       file_dataset->filepath = dataset_config.get<std::string>("path");
       file_dataset->type = to_pressio_dtype(dataset_config.get<std::string>("dtype"));
@@ -62,7 +62,7 @@ std::vector<std::unique_ptr<dataset>> load_datasets(std::string const& dataset_c
       }
       datasets.emplace_back(std::move(file_dataset));
     } else if(type == "hdf") {
-      std::clog << "loading hdf dataset" << name << std::endl;
+      if(verbose) std::clog << "loading hdf dataset" << name << std::endl;
       auto hdf_dataset = std::make_unique<hdf_dataset_t>(name);
       hdf_dataset->filepath = dataset_config.get<std::string>("path");
       hdf_dataset->dataset_name = dataset_config.get<std::string>("dataset");

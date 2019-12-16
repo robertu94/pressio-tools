@@ -2,7 +2,23 @@ add_executable(pressio_batch
   pressio_batch.cc 
   datasets.cc
   compressor_configs.cc
+  io.cc
+  cmdline.cc
 )
 target_link_libraries(pressio_batch Boost::headers LibPressio::libpressio utils)
 
+add_executable(pressio_batch_mpi
+  pressio_batch_mpi.cc 
+  datasets.cc
+  compressor_configs.cc
+  io.cc
+  cmdline.cc
+  mpi_common.cc
+  mpi_master.cc
+  mpi_worker.cc
+)
+target_link_libraries(pressio_batch_mpi Boost::headers LibPressio::libpressio
+  utils MPI::MPI_CXX)
+
 install(TARGETS pressio_batch)
+install(TARGETS pressio_batch_mpi)

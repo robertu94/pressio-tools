@@ -33,12 +33,12 @@ struct compressor_config_impl: public compressor_config {
   std::string const& get_name() { return name; }
 };
 
-std::vector<std::unique_ptr<compressor_config>> load_compressors(std::string const& compressor_config_path) {
+std::vector<std::unique_ptr<compressor_config>> load_compressors(std::string const& compressor_config_path, bool verbose) {
   std::vector<std::unique_ptr<compressor_config>> compressors;
   pt::ptree compressor_tree;
   pt::read_json(compressor_config_path, compressor_tree);
   for (auto& [path, config] : compressor_tree) {
-      std::clog << "loading configuration " << path << std::endl;
+      if(verbose) std::clog << "loading configuration " << path << std::endl;
       auto compressor_config = std::make_unique<compressor_config_impl>();
       compressor_config->name = path;
       compressor_config->compressor_id = config.get<std::string>("compressor_id");
