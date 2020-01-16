@@ -17,7 +17,11 @@ int main(int argc, char *argv[])
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-  auto cmdline = parse_args(argc, argv);
+  auto cmdline = parse_args(argc, argv, rank == 0);
+  if(cmdline.error_code) {
+    MPI_Finalize();
+    exit(1);
+  }
   setup_types();
 
   auto library = pressio_instance();

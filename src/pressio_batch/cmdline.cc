@@ -16,7 +16,7 @@ pressio_batch [args] [metrics...]
 };
 
 cmdline
-parse_args(int argc, char* argv[])
+parse_args(int argc, char* argv[], bool verbose)
 {
   cmdline args;
 
@@ -30,7 +30,8 @@ parse_args(int argc, char* argv[])
         args.compressors = optarg;
         break;
       case 'h':
-        usage();
+        if(verbose) usage();
+        args.error_code = 1;
         break;
       case 'r':
         args.replicats = std::stoi(optarg);

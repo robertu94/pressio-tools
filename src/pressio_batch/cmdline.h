@@ -8,7 +8,8 @@ struct cmdline
   std::string datasets = "./datasets.json";
   std::string compressors = "./compressors.json";
   unsigned int replicats = 1;
+  int error_code = 0;
 };
 
 cmdline
-parse_args(int argc, char* argv[]);
+parse_args(int argc, char* argv[], bool verbose = false);
