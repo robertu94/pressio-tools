@@ -2,7 +2,7 @@
 
 #include <libpressio.h>
 #include <libpressio_ext/cpp/options.h>
-#include <libpressio_ext/cpp/printers.h>
+#include <libpressio_ext/io/posix.h>
 #include <libdistributed_work_queue.h>
 
 #include "cmdline.h"
@@ -14,28 +14,6 @@ namespace queue = distributed::queue;
 using RequestType = std::tuple<int,int,int>; //task_id, dataset_id, compressor_id
 using ResponseType = std::tuple<int,int,double>; //task_id, metric_id, metric
 
-
-pressio_options *run_compressor(const std::vector<std::unique_ptr<dataset>> &datasets,
-                                pressio_compressor* compressor,
-                                pressio_metrics *metrics,
-                                RequestType request) {
-  auto [task_id, dataset_id, compressor_id] = request;
-  pressio_options *metrics_results;
-  auto input_data = datasets[dataset_id]->load();
-  auto compressed = pressio_data_new_empty(pressio_byte_dtype, 0, nullptr);
-  auto decompressed = pressio_data_new_clone(input_data);
-
-  pressio_compressor_set_metrics(compressor, metrics);
-  pressio_compressor_compress(compressor, input_data, compressed);
-  pressio_compressor_decompress(compressor, compressed, decompressed);
-  metrics_results = pressio_compressor_get_metrics_results(compressor);
-
-  pressio_data_free(input_data);
-  pressio_data_free(decompressed);
-  pressio_data_free(compressed);
-  pressio_compressor_release(compressor);
-  return metrics_results;
-}
 
 std::map<int, std::string> init_fieldnames(std::vector<std::string> const& fields, pressio_metrics* metrics) {
   std::map<int, std::string> id_to_fieldname;
@@ -91,11 +69,14 @@ int main(int argc, char *argv[])
     }
   }
   std::map<int, std::string> id_to_fieldname = init_fieldnames(cmdline.fields, metrics);
-  std::transform(std::begin(id_to_fieldname),
-                 std::end(id_to_fieldname),
-                 std::back_inserter(cmdline.fields),
-                 [](auto const& field) {return field.second;}
-                );
+  if(cmdline.fields.empty())
+  {
+    std::transform(std::begin(id_to_fieldname),
+                   std::end(id_to_fieldname),
+                   std::back_inserter(cmdline.fields),
+                   [](auto const& field) {return field.second;}
+                  );
+  }
 
   std::map<std::string, int> fieldname_to_id;
   for (auto const& field : id_to_fieldname) {
@@ -104,10 +85,11 @@ int main(int argc, char *argv[])
 
   //output the header
   if(rank == 0) {
-    std::cout << "configuration" << std::endl;
+    std::cout << "configuration";
     for (auto const& field : cmdline.fields) {
-      std::cout << ',' << field << std::endl;
+      std::cout << ',' << field;
     }
+    std::cout << std::endl;
   }
 
   //prepare the receive responses
@@ -121,10 +103,25 @@ int main(int argc, char *argv[])
       [&](RequestType request) {
         auto [task_id, dataset_id, compressor_id] = request;
         std::vector<ResponseType> task_responses;
-        pressio_options* metrics_results;
         auto compressor = compressors[compressor_id]->load(library);
-        metrics_results = run_compressor(datasets, compressor, metrics, request);
+        auto input_data = datasets[dataset_id]->load();
+        auto compressed = pressio_data_new_empty(pressio_byte_dtype, 0, nullptr);
+        auto decompressed = pressio_data_new_clone(input_data);
 
+        pressio_compressor_set_metrics(compressor, metrics);
+        pressio_compressor_compress(compressor, input_data, compressed);
+        pressio_compressor_decompress(compressor, compressed, decompressed);
+
+        if(not cmdline.compressed_dir.empty()) {
+          auto compressed_path = cmdline.compressed_dir + "/" + task_to_name[task_id];
+          pressio_io_data_path_write(compressed, compressed_path.c_str());
+        }
+        if(not cmdline.decompressed_dir.empty()) {
+          auto decompressed_path = cmdline.decompressed_dir + "/" + task_to_name[task_id];
+          pressio_io_data_path_write(decompressed, decompressed_path.c_str());
+        }
+
+        auto metrics_results = pressio_compressor_get_metrics_results(compressor);
         for (auto metric_result : *metrics_results) {
           task_responses.emplace_back(
               /*task_id*/task_id,
@@ -133,15 +130,17 @@ int main(int argc, char *argv[])
             );
         }
 
-
+        pressio_data_free(input_data);
+        pressio_data_free(decompressed);
+        pressio_data_free(compressed);
+        pressio_compressor_release(compressor);
+        pressio_options_free(metrics_results);
         return task_responses;
       },
       [&](ResponseType response){
         auto&& [task_id, metric_id, metric] = response;
         responses[task_id].set(id_to_fieldname[metric_id], metric);
-        auto rs = responses[task_id].size();
-        auto ids = id_to_fieldname.size();
-        if(rs == ids) {
+        if(responses[task_id].size() == id_to_fieldname.size()) {
           output_csv(
               std::cout,
               task_to_name[task_id],

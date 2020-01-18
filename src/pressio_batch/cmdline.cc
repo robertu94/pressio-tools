@@ -12,6 +12,8 @@ pressio_batch [args] [metrics...]
 -d dataset_config_file path to the dataset configuration, default: "./datasets.json"
 -r replicats the number of times to replicate each configuration, default: 1
 -m metrics_ids what metrics_ids to load, default: {time, size, error_stat}
+-w compressed_dir output the compressed data files to this directory
+-W decompressed_dir output the decompressed data files to this directory
 )";
 };
 
@@ -21,7 +23,7 @@ parse_args(int argc, char* argv[], bool verbose)
   cmdline args;
 
   int opt;
-  while ((opt = getopt(argc, argv, "c:d:hr:m:")) != -1) {
+  while ((opt = getopt(argc, argv, "c:d:hr:m:w:W:")) != -1) {
     switch (opt) {
       case 'd':
         args.datasets = optarg;
@@ -38,6 +40,12 @@ parse_args(int argc, char* argv[], bool verbose)
         break;
       case 'm':
         args.metrics.push_back(optarg);
+        break;
+      case 'w':
+        args.compressed_dir = optarg;
+        break;
+      case 'W':
+        args.decompressed_dir = optarg;
         break;
       default:
         break;
