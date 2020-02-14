@@ -17,5 +17,9 @@ add_executable(pressio_batch_mpi
 target_link_libraries(pressio_batch_mpi Boost::headers LibPressio::libpressio
   utils LibDistributed::libdistributed)
 
-install(TARGETS pressio_batch)
-install(TARGETS pressio_batch_mpi)
+install(TARGETS pressio_batch
+	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+	)
+install(TARGETS pressio_batch_mpi
+	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+	)
