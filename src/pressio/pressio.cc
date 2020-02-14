@@ -4,6 +4,7 @@
 #include <utility>
 #include <algorithm>
 #include <libpressio/libpressio.h>
+#include <libpressio/libpressio_ext/io/pressio_io.h>
 #include <libpressio/libpressio_ext/cpp/options.h>
 #include <libpressio/libpressio_ext/cpp/printers.h>
 
@@ -137,15 +138,33 @@ main(int argc, char* argv[])
 
     if (opts.actions.find(Action::Settings) != opts.actions.end()) {
       print_selected_options(options, std::begin(opts.print_options), std::end(opts.print_options));
+
       pressio_options* configuration = pressio_compressor_get_configuration(compressor);
       print_selected_options(configuration, std::begin(opts.print_compile_options), std::end(opts.print_compile_options));
       pressio_options_free(configuration);
+
+      pressio_options* metrics_options = pressio_compressor_metrics_get_options(compressor);
+      print_selected_options(metrics_options, std::begin(opts.print_metrics_options), std::end(opts.print_metrics_options));
+      pressio_options_free(metrics_options);
+
+      pressio_options* input_options = pressio_io_get_options(opts.input_file_action);
+      print_selected_options(input_options, std::begin(opts.print_io_input_options), std::end(opts.print_io_input_options));
+      pressio_options_free(input_options);
+      
+      pressio_options* comp_options = pressio_io_get_options(opts.compressed_file_action);
+      print_selected_options(comp_options, std::begin(opts.print_io_comp_options), std::end(opts.print_io_comp_options));
+      pressio_options_free(comp_options);
+
+      pressio_options* decomp_options = pressio_io_get_options(opts.decompressed_file_action);
+      print_selected_options(decomp_options, std::begin(opts.print_io_decomp_options), std::end(opts.print_io_decomp_options));
+      pressio_options_free(decomp_options);
+
     }
     
     if (opts.actions.find(Action::Compress) != opts.actions.end()) {
       compressed = compress(compressor, opts);
-      if (auto result = opts.compressed_file_action(compressed)) {
-        std::cerr << "writing file failed " << result.err_msg << std::endl;
+      if (auto result = pressio_io_write(opts.compressed_file_action,compressed)) {
+        std::cerr << "writing compressed file failed " << pressio_io_error_msg(opts.compressed_file_action) << std::endl;
         exit(EXIT_FAILURE);
       }
     } else if (opts.actions.find(Action::Decompress) != opts.actions.end()) {
@@ -164,8 +183,8 @@ main(int argc, char* argv[])
     if (opts.actions.find(Action::Decompress) != opts.actions.end()) {
       decompressed = decompress(compressor, compressed, opts);
     }
-    if (auto result = opts.decompressed_file_action(decompressed)) {
-      std::cerr << result.err_msg << std::endl;
+    if (auto result = pressio_io_write(opts.decompressed_file_action,decompressed)) {
+      std::cerr << "writing decompressed file failed " << pressio_io_error_msg(opts.decompressed_file_action) << std::endl;
       exit(EXIT_FAILURE);
     }
 

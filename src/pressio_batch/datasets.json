@@ -1,13 +1,17 @@
 {
   "CLOUDf48.bin.f32" : {
-    "path": "/home/runderwood/git/datasets/hurricane/100x500x500/CLOUDf48.bin.f32",
-    "type": "raw",
+    "config": {
+      "io:path": "/home/runderwood/git/datasets/hurricane/100x500x500/CLOUDf48.bin.f32"
+    },
+    "type": "posix",
     "dtype": "float",
     "dims": [ 500, 500, 100 ]
   },
   "PRECIPf48.bin.f32" : {
-    "path": "/home/runderwood/git/datasets/hurricane/100x500x500/PRECIPf48.bin.f32",
-    "type": "raw",
+    "config" : {
+      "io:path": "/home/runderwood/git/datasets/hurricane/100x500x500/PRECIPf48.bin.f32"
+    },
+    "type": "posix",
     "dtype": "float",
     "dims": [ 500, 500, 100 ]
   }

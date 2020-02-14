@@ -2,6 +2,10 @@
 
 #include <iostream>
 #include <libpressio.h>
+#include <libpressio_ext/cpp/pressio.h>
+#include <libpressio_ext/cpp/options.h>
+#include <libpressio_ext/cpp/io.h>
+#include <libpressio_ext/io/pressio_io.h>
 #include <libpressio_ext/io/posix.h>
 #include <libpressio_ext/io/hdf5.h>
 #include <boost/property_tree/ptree.hpp>
@@ -31,6 +35,20 @@ struct hdf_dataset_t: public dataset {
   }
 };
 
+struct generic_dataset_t: public dataset {
+  generic_dataset_t(std::string const& name): dataset(name) {}
+  pressio_io io;
+  std::vector<size_t> dims;
+  pressio_dtype type;
+
+  pressio_data* load() override {
+    pressio_data* desc = (dims.empty())
+                           ? nullptr
+                           : pressio_data_new_empty(type, dims.size(), dims.data());
+    return pressio_io_read(&io, desc);
+  }
+};
+
 pressio_dtype to_pressio_dtype(std::string const& name) {
   if(name == "float") return pressio_float_dtype;
   if(name == "double") return pressio_double_dtype;
@@ -47,30 +65,32 @@ pressio_dtype to_pressio_dtype(std::string const& name) {
 
 
 std::vector<std::unique_ptr<dataset>> load_datasets(std::string const& dataset_config_path, bool verbose) {
+  pressio library;
   std::vector<std::unique_ptr<dataset>> datasets;
   pt::ptree dataset_tree;
   pt::read_json(dataset_config_path, dataset_tree);
   for (auto& [name, dataset_config] : dataset_tree) {
+    if(verbose) std::cerr << "loading dataset " << name << std::endl;
     auto type = dataset_config.get<std::string>("type");
-    if(type == "raw") {
-      if(verbose) std::clog << "loading raw dataset" << name << std::endl;
-      auto file_dataset = std::make_unique<file_dataset_t>(name);
-      file_dataset->filepath = dataset_config.get<std::string>("path");
-      file_dataset->type = to_pressio_dtype(dataset_config.get<std::string>("dtype"));
+    auto io_dataset = std::make_unique<generic_dataset_t>(name);
+    io_dataset->io = library.get_io(type);
+    if(not io_dataset->io) throw std::runtime_error("unknown format: "s + library.err_msg());
+    if(dataset_config.find("dims") != dataset_config.not_found()) {
       for (auto const& dim : dataset_config.get_child("dims")) {
-        file_dataset->dims.push_back(dim.second.get_value<int>());
+        io_dataset->dims.push_back(dim.second.get_value<int>());
       }
-      datasets.emplace_back(std::move(file_dataset));
-    } else if(type == "hdf") {
-      if(verbose) std::clog << "loading hdf dataset" << name << std::endl;
-      auto hdf_dataset = std::make_unique<hdf_dataset_t>(name);
-      hdf_dataset->filepath = dataset_config.get<std::string>("path");
-      hdf_dataset->dataset_name = dataset_config.get<std::string>("dataset");
-      datasets.emplace_back(std::move(hdf_dataset));
     }
-    else {
-      throw std::runtime_error("invalid dataset configuration for "s + name);
+    if(dataset_config.find("dtype") != dataset_config.not_found()) {
+      io_dataset->type = to_pressio_dtype(dataset_config.get<std::string>("dtype"));
     }
+    if(dataset_config.find("config") != dataset_config.not_found()) {
+      auto options = io_dataset->io->get_options();
+      for (auto const& config : dataset_config.get_child("config")) {
+        options.cast_set(config.first, config.second.get_value<std::string>(), pressio_conversion_special);
+      }
+      io_dataset->io->set_options(options);
+    }
+    datasets.emplace_back(std::move(io_dataset));
   }
   return datasets;
 };

@@ -6,7 +6,8 @@
 #include <optional>
 #include <functional>
 #include <pressio_data.h>
-#include "file_action.h"
+#include <libpressio_ext/io/pressio_io.h>
+
 
 enum class Action
 {
@@ -25,9 +26,14 @@ struct options
   std::vector<const char*> metrics_ids;
   std::set<const char*> print_metrics;
   std::set<const char*> print_compile_options;
-  FileAction compressed_file_action = noop();
-  FileAction decompressed_file_action = noop();
+  std::set<const char*> print_metrics_options;
+  std::set<const char*> print_io_input_options;
+  std::set<const char*> print_io_decomp_options;
+  std::set<const char*> print_io_comp_options;
   pressio_data* input = nullptr;
+  pressio_io* input_file_action;
+  pressio_io* compressed_file_action;
+  pressio_io* decompressed_file_action;
 };
 
 options parse_args(int argc, char* argv[]);
