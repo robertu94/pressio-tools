@@ -138,17 +138,19 @@ int main(int argc, char *argv[])
         pressio_options_free(metrics_results);
         return task_responses;
       },
-      [&](ResponseType response){
-        auto&& [task_id, metric_id, metric] = response;
-        responses[task_id].set(id_to_fieldname[metric_id], metric);
-        if(responses[task_id].size() == id_to_fieldname.size()) {
-          output_csv(
-              std::cout,
-              task_to_name[task_id],
-              &responses[task_id],
-              cmdline.fields
-              );
+      [&](std::vector<ResponseType> const& responses_v){
+        int my_task_id;
+        for (auto const& response : responses_v) {
+          auto& [task_id, metric_id, metric] = response;
+          my_task_id = task_id;
+          responses[task_id].set(id_to_fieldname[metric_id], metric);
         }
+        output_csv(
+            std::cout,
+            task_to_name[my_task_id],
+            &responses[my_task_id],
+            cmdline.fields
+            );
       }
       );
 
