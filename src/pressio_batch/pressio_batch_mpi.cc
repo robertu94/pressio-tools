@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
 
   //output the header
   if(rank == 0) {
-    std::cout << "configuration";
+    std::cout << "dataset,configuration";
     for (auto const& field : cmdline.fields) {
       std::cout << ',' << field;
     }

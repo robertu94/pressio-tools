@@ -62,7 +62,7 @@ main(int argc, char* argv[])
                            std::end(*metrics_results),
                            std::back_inserter(args.fields),
                            [](auto const& iterator) { return iterator.first; });
-          std::cout << "configuration";
+          std::cout << "dataset,configuration";
           for (auto const& field : args.fields) {
             std::cout << ',' << field;
           }
