@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
     for (int dataset_id = 0; dataset_id < datasets.size(); ++dataset_id) {
       for (int compressor_id = 0; compressor_id < compressors.size(); ++compressor_id) {
         task_to_name[task_id] = datasets[dataset_id]->get_name() + \
-                                compressors[compressor_id]->get_name();
+                                "," + compressors[compressor_id]->get_name();
         tasks.emplace_back(task_id++, dataset_id, compressor_id);
       }
     }

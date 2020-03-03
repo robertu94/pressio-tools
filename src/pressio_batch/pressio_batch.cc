@@ -69,7 +69,7 @@ main(int argc, char* argv[])
           std::cout << std::endl;
         }
         output_csv(std::cout,
-                   dataset->get_name() + compressor_factory->get_name(),
+                   dataset->get_name() + "," + compressor_factory->get_name(),
                    metrics_results, args.fields);
         pressio_options_free(metrics_results);
         pressio_data_free(compressed);
