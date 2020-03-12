@@ -11,7 +11,7 @@ pressio_batch [args] [metrics...]
 -c compressor_config_file path to the compressor configuration, default: "./compressors.json"
 -d dataset_config_file path to the dataset configuration, default: "./datasets.json"
 -r replicats the number of times to replicate each configuration, default: 1
--m metrics_ids what metrics_ids to load, default: {time, size, error_stat}
+-m metrics_config file path the metrics configuration, default: "./metrics.json"
 -w compressed_dir output the compressed data files to this directory
 -W decompressed_dir output the decompressed data files to this directory
 )";
@@ -39,7 +39,7 @@ parse_args(int argc, char* argv[], bool verbose)
         args.replicats = std::stoi(optarg);
         break;
       case 'm':
-        args.metrics.push_back(optarg);
+        args.metrics = optarg;
         break;
       case 'w':
         args.compressed_dir = optarg;
@@ -50,11 +50,6 @@ parse_args(int argc, char* argv[], bool verbose)
       default:
         break;
     }
-  }
-  if (args.metrics.empty()) {
-    args.metrics.push_back("time");
-    args.metrics.push_back("size");
-    args.metrics.push_back("error_stat");
   }
   for (int i = optind; i < argc; ++i) {
     args.fields.push_back(argv[i]);

@@ -3,10 +3,10 @@
 
 struct cmdline
 {
-  std::vector<const char*> metrics;
   std::vector<std::string> fields;
   std::string datasets = "./datasets.json";
   std::string compressors = "./compressors.json";
+  std::string metrics = "./metrics.json";
   std::string decompressed_dir;
   std::string compressed_dir;
   unsigned int replicats = 1;

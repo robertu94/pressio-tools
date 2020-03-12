@@ -4,6 +4,7 @@ add_executable(pressio_batch
   compressor_configs.cc
   io.cc
   cmdline.cc
+  metrics.cc
 )
 target_link_libraries(pressio_batch Boost::headers LibPressio::libpressio utils)
 
@@ -13,6 +14,7 @@ add_executable(pressio_batch_mpi
   compressor_configs.cc
   io.cc
   cmdline.cc
+  metrics.cc
 )
 target_link_libraries(pressio_batch_mpi Boost::headers LibPressio::libpressio
   utils LibDistributed::libdistributed)

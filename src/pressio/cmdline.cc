@@ -45,6 +45,8 @@ output datasets:
 -Z <option_key> prints this option after setting it, defaults none, "all" prints all options for the decompressed file
 
 metrics:
+-n <option>=<value> the option key to set to value, default none 
+-N <option_key> prints this option after setting it, defaults none, "all" prints all options for the decompressed file
 -m <metrics_id> id of a metrics plugin, default none
 -M <metrics_id> specific metrics to print, default none, "all" prints all options
 
@@ -180,7 +182,7 @@ parse_args(int argc, char* argv[])
   std::map<std::string, std::string> decompressed_io_options;
   std::map<std::string, std::string> compressed_io_options;
 
-  while ((opt = getopt(argc, argv, "a:d:t:i:I:u:U:T:f:w:s:y:z:F:W:S:Y:Z:m:M:o:O:C:")) != -1) {
+  while ((opt = getopt(argc, argv, "a:d:t:i:I:u:U:T:f:w:s:y:z:F:W:S:Y:Z:m:M:n:N:o:O:C:")) != -1) {
     switch (opt) {
       case 'a':
         actions.emplace(parse_action(optarg));
@@ -210,6 +212,12 @@ parse_args(int argc, char* argv[])
         break;
       case 'M':
         opts.print_metrics.emplace(optarg);
+        break;
+      case 'n':
+        opts.metrics_options.emplace(parse_option(optarg));
+        break;
+      case 'N':
+        opts.print_metrics_options.emplace(optarg);
         break;
       case 'o':
         opts.options.emplace(parse_option(optarg));

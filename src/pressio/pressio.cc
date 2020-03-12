@@ -21,6 +21,26 @@ void print_versions(pressio* library) {
   }
 }
 
+template <class ForwardIt>
+void print_selected_options(pressio_options* options, ForwardIt begin, ForwardIt end) {
+  std::for_each(
+      begin,
+      end,
+      [options](std::string const option){
+        if (option == "all") {
+          std::cerr << (*options);
+        } else { 
+          try {
+            std::cerr << option << options->get(option) << std::endl;
+          } catch(std::out_of_range const&) {
+            std::cerr << ": option is unknown" << std::endl;
+            exit(EXIT_FAILURE);
+          }
+        }
+      });
+}
+
+
 std::tuple<pressio_compressor*, pressio_metrics*, pressio_options*> setup_compressor(struct pressio* pressio, options opts) {
   auto* compressor = pressio_get_compressor(pressio, opts.compressor.c_str());
   if (compressor == nullptr) {
@@ -35,6 +55,27 @@ std::tuple<pressio_compressor*, pressio_metrics*, pressio_options*> setup_compre
     std::cerr << pressio_error_msg(pressio) << std::endl;
     exit(pressio_error_code(pressio));
   }
+  pressio_options* metrics_options = pressio_metrics_get_options(metrics);
+  for(auto const& [setting, value]: opts.metrics_options) {
+    auto* value_op = pressio_option_new_string(value.c_str());
+    auto status = pressio_options_cast_set(metrics_options,
+        setting.c_str(),
+        value_op,
+        pressio_conversion_special
+        );
+    switch(status) {
+      case pressio_options_key_does_not_exist:
+        std::cerr << "non existent option for the metric: " << setting  << std::endl;
+        exit(EXIT_FAILURE);
+      case pressio_options_key_exists:
+        std::cerr << "cannot convert to correct type: " << value << " for setting " << setting  << std::endl;
+        exit(EXIT_FAILURE);
+      default:
+        (void)0;
+    }
+    pressio_option_free(value_op);
+  }
+  pressio_metrics_set_options(metrics, metrics_options);
   pressio_compressor_set_metrics(compressor, metrics);
 
 
@@ -67,6 +108,10 @@ std::tuple<pressio_compressor*, pressio_metrics*, pressio_options*> setup_compre
     std::cerr << pressio_compressor_error_msg(compressor) << std::endl;
     exit(pressio_compressor_error_code(compressor));
   }
+  pressio_options_free(compressor_options);
+  //meta-compressors need their options called twice to get the complete list of options
+  compressor_options = pressio_compressor_get_options(compressor);
+    
 
   return {compressor, metrics, compressor_options};
 }
@@ -93,25 +138,6 @@ pressio_data* decompress(struct pressio_compressor* compressor, pressio_data* co
 
 }
 
-
-template <class ForwardIt>
-void print_selected_options(pressio_options* options, ForwardIt begin, ForwardIt end) {
-  std::for_each(
-      begin,
-      end,
-      [options](std::string const option){
-        if (option == "all") {
-          std::cerr << (*options);
-        } else { 
-          try {
-            std::cerr << option << options->get(option) << std::endl;
-          } catch(std::out_of_range const&) {
-            std::cerr << ": option is unknown" << std::endl;
-            exit(EXIT_FAILURE);
-          }
-        }
-      });
-}
 
 int
 main(int argc, char* argv[])

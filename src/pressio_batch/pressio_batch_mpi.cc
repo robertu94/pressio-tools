@@ -10,6 +10,7 @@
 #include "datasets.h"
 #include "compressor_configs.h"
 #include "io.h"
+#include "metrics.h"
 
 namespace queue = distributed::queue;
 using RequestType = std::tuple<int,int,int>; //task_id, dataset_id, compressor_id
@@ -24,7 +25,9 @@ std::map<int, std::string> init_fieldnames(std::vector<std::string> const& field
     pressio_options* fields_opts = pressio_metrics_get_results(metrics);
     std::vector<std::string> field_names;
     for (auto const& field : *fields_opts) {
-      field_names.emplace_back(field.first);
+      if(field.second.as(pressio_option_double_type, pressio_conversion_special).has_value()) {
+        field_names.emplace_back(field.first);
+      }
     }
     std::sort(std::begin(field_names), std::end(field_names));
     for (auto const& field : field_names) {
@@ -52,7 +55,8 @@ int main(int argc, char *argv[])
   }
 
   auto library = pressio_instance();
-  auto metrics = pressio_new_metrics(library, cmdline.metrics.data(), cmdline.metrics.size());
+  auto metrics_config = load_metrics(cmdline.metrics, rank==0);
+  auto metrics = metrics_config->load(library);
   auto datasets = load_datasets(cmdline.datasets, rank == 0);
   auto compressors = load_compressors(cmdline.compressors, rank == 0);
 
@@ -124,11 +128,14 @@ int main(int argc, char *argv[])
 
         auto metrics_results = pressio_compressor_get_metrics_results(compressor);
         for (auto metric_result : *metrics_results) {
+          auto double_result = metric_result.second.as(pressio_option_double_type, pressio_conversion_explicit); 
+          if(double_result.has_value()) {
           task_responses.emplace_back(
               /*task_id*/task_id,
               /*metric_id*/fieldname_to_id[metric_result.first],
-              /*metric*/metric_result.second.as(pressio_option_double_type, pressio_conversion_explicit).get_value<double>()
+              /*metric*/double_result.get_value<double>()
             );
+          }
         }
 
         pressio_data_free(input_data);

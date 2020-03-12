@@ -21,6 +21,7 @@ struct options
 {
   std::set<Action> actions;
   std::map<std::string, std::string> options;
+  std::map<std::string, std::string> metrics_options;
   std::set<std::string> print_options;
   std::string compressor;
   std::vector<const char*> metrics_ids;

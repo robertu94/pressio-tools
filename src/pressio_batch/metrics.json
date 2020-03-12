@@ -1,0 +1,6 @@
+{
+  "modules": ["external"],
+  "options": {
+    "external:command": "./hello_metrics.sh"
+  }
+}

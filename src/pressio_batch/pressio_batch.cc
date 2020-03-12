@@ -10,6 +10,7 @@
 #include "datasets.h"
 #include "cmdline.h"
 #include "io.h"
+#include "metrics.h"
 
 
 
@@ -19,11 +20,11 @@ main(int argc, char* argv[])
   auto args = parse_args(argc, argv);
 
   auto library = pressio_instance();
-  auto metrics =
-    pressio_new_metrics(library, args.metrics.data(), args.metrics.size());
 
   auto datasets = load_datasets(args.datasets);
   auto compressor_configs = load_compressors(args.compressors);
+  auto metrics_config = load_metrics(args.metrics);
+  auto metrics = metrics_config->load(library);
   bool first = true;
 
   for (auto& dataset : datasets) {
