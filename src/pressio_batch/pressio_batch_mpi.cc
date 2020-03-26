@@ -46,6 +46,7 @@ int main(int argc, char *argv[])
 {
   int rank;
   MPI_Init(&argc, &argv);
+  try {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   auto cmdline = parse_args(argc, argv, rank == 0);
@@ -161,6 +162,10 @@ int main(int argc, char *argv[])
       }
       );
 
+  } catch(std::exception const& e) {
+    std::cerr << e.what() << std::endl;
+    
+  }
 
   MPI_Finalize();
   return 0;
