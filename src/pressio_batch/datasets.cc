@@ -83,10 +83,37 @@ std::vector<std::unique_ptr<dataset>> load_datasets(std::string const& dataset_c
     if(dataset_config.find("dtype") != dataset_config.not_found()) {
       io_dataset->type = to_pressio_dtype(dataset_config.get<std::string>("dtype"));
     }
+    if(dataset_config.find("early_config") != dataset_config.not_found()) {
+      pressio_options options;
+      for (auto const& config : dataset_config.get_child("early_config")) {
+        if(config.second.empty())
+        {
+          options.set(config.first, config.second.get_value<std::string>());
+        } else {
+          //we have a list
+          std::vector<std::string> values;
+          std::transform(std::begin(config.second), std::end(config.second), std::back_inserter(values), [](auto value){
+              return value.second.data();
+          });
+          options.set(config.first, values);
+        }
+      }
+      io_dataset->io->set_options(options);
+    }
     if(dataset_config.find("config") != dataset_config.not_found()) {
       auto options = io_dataset->io->get_options();
       for (auto const& config : dataset_config.get_child("config")) {
-        options.cast_set(config.first, config.second.get_value<std::string>(), pressio_conversion_special);
+        if(config.second.empty())
+        {
+          options.cast_set(config.first, config.second.get_value<std::string>(), pressio_conversion_special);
+        } else {
+          //we have a list
+          std::vector<std::string> values;
+          std::transform(std::begin(config.second), std::end(config.second), std::back_inserter(values), [](auto value){
+              return value.second.data();
+          });
+          options.cast_set(config.first, values, pressio_conversion_special);
+        }
       }
       io_dataset->io->set_options(options);
     }

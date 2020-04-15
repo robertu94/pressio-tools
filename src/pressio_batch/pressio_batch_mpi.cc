@@ -114,6 +114,11 @@ int main(int argc, char *argv[])
         auto compressed = pressio_data_new_empty(pressio_byte_dtype, 0, nullptr);
         auto decompressed = pressio_data_new_clone(input_data);
 
+        pressio_options* configuration_name = pressio_options_new();
+        pressio_options_set_string(configuration_name, "external:config_name", task_to_name[task_id].c_str());
+        pressio_metrics_set_options(metrics, configuration_name);
+        pressio_options_free(configuration_name);
+
         pressio_compressor_set_metrics(compressor, metrics);
         pressio_compressor_compress(compressor, input_data, compressed);
         pressio_compressor_decompress(compressor, compressed, decompressed);

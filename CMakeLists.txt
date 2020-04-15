@@ -21,10 +21,15 @@ find_package(Boost REQUIRED)
 find_package(LibPressio REQUIRED)
 find_package(MPI REQUIRED COMPONENTS CXX)
 find_package(LibDistributed REQUIRED)
+find_package(LibPressioOpt REQUIRED)
 
-add_library(utils INTERFACE)
-target_include_directories(utils INTERFACE include/)
+add_library(utils 
+  src/utils/string_options.cc
+  )
+target_link_libraries(utils PUBLIC LibPressio::libpressio)
+target_include_directories(utils PUBLIC include/)
 
 add_subdirectory(src/pressio)
 add_subdirectory(src/pressio_batch)
+add_subdirectory(src/find_interesting_points/)
 add_subdirectory(test)

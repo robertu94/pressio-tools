@@ -6,11 +6,13 @@
 #include <libpressio.h>
 #include <libpressio_ext/cpp/options.h>
 #include <libpressio_ext/cpp/pressio.h>
+#include <libpressio_ext/cpp/printers.h>
 #include <libpressio_ext/cpp/io.h>
 #include <libpressio_ext/io/pressio_io.h>
 
 
 #include "utils/fuzzy_matcher.h"
+#include <utils/string_options.h>
 
 
 namespace {
@@ -51,6 +53,7 @@ metrics:
 -M <metrics_id> specific metrics to print, default none, "all" prints all options
 
 options:
+-b <key>=<value> set the option early
 -o <key>=<value> the option key to set to value, default none
 -O <option_key> prints this option after setting it, defaults none, "all" prints all options
 
@@ -62,6 +65,7 @@ compressors: )";
   auto* pressio = pressio_instance();
   std::cerr << pressio_supported_compressors() << std::endl;
   std::cerr << "io: " << pressio_supported_io_modules() << std::endl;
+  std::cerr << "metrics: " << pressio_supported_metrics() << std::endl;
 
 }
 
@@ -142,7 +146,7 @@ Action parse_action(std::string const& action) {
 
 }
 
-pressio_io* make_io(std::string const& format, std::map<std::string, std::string> const& format_options)
+pressio_io* make_io(std::string const& format, std::multimap<std::string, std::string> const& format_options)
 {
   auto library = pressio_instance();
   auto io = pressio_get_io(library, format.c_str());
@@ -151,13 +155,12 @@ pressio_io* make_io(std::string const& format, std::map<std::string, std::string
     exit(EXIT_FAILURE);
   }
   auto options = pressio_io_get_options(io);
-  for (auto const& key_value : format_options) {
-    auto value = pressio_option_new_string(key_value.second.c_str());
-    if(pressio_options_cast_set(options, key_value.first.c_str(), value, pressio_conversion_special) != pressio_options_key_set) {
+  auto format_pressio_options = options_from_multimap(format_options);
+  for (auto const& key_value : *format_pressio_options) {
+    if(pressio_options_cast_set(options, key_value.first.c_str(), &key_value.second, pressio_conversion_special) != pressio_options_key_set) {
       std::cerr << "failed to set" << key_value.first << " to " << key_value.second << std::endl;
       exit(EXIT_FAILURE);
     }
-    pressio_option_free(value);
   }
   pressio_io_set_options(io, options);
 
@@ -178,14 +181,17 @@ parse_args(int argc, char* argv[])
   std::optional<std::string> input_io_format;
   std::optional<std::string> compressed_io_format;
   std::optional<std::string> decompressed_io_format;
-  std::map<std::string, std::string> input_io_options;
-  std::map<std::string, std::string> decompressed_io_options;
-  std::map<std::string, std::string> compressed_io_options;
+  std::multimap<std::string, std::string> input_io_options;
+  std::multimap<std::string, std::string> decompressed_io_options;
+  std::multimap<std::string, std::string> compressed_io_options;
 
-  while ((opt = getopt(argc, argv, "a:d:t:i:I:u:U:T:f:w:s:y:z:F:W:S:Y:Z:m:M:n:N:o:O:C:")) != -1) {
+  while ((opt = getopt(argc, argv, "a:b:d:t:i:I:u:U:T:f:w:s:y:z:F:W:S:Y:Z:m:M:n:N:o:O:C:")) != -1) {
     switch (opt) {
       case 'a':
         actions.emplace(parse_action(optarg));
+        break;
+      case 'b':
+        opts.early_options.emplace(parse_option(optarg));
         break;
       case 'C':
         opts.print_compile_options.emplace(optarg);
@@ -201,11 +207,11 @@ parse_args(int argc, char* argv[])
         break;
       case 'i':
         if(!input_io_format) input_io_format = "posix";
-        input_io_options["io:path"] = optarg;
+        input_io_options.emplace("io:path", optarg);
         break;
       case 'I':
         if(input_io_format || input_io_format=="posix") input_io_format = "hdf5";
-        input_io_options["hdf5:dataset"] = optarg;
+        input_io_options.emplace("hdf5:dataset", optarg);
         break;
       case 'm':
         opts.metrics_ids.push_back(optarg);
@@ -227,19 +233,19 @@ parse_args(int argc, char* argv[])
         break;
       case 'w':
         if(!compressed_io_format) compressed_io_format = "posix";
-        compressed_io_options["io:path"] = optarg;
+        compressed_io_options.emplace("io:path", optarg);
         break;
       case 'W':
         if(!decompressed_io_format) decompressed_io_format = "posix";
-        decompressed_io_options["io:path"] = optarg;
+        decompressed_io_options.emplace("io:path", optarg);
         break;
       case 's':
         if(compressed_io_format || compressed_io_format=="posix") compressed_io_format = "hdf5";
-        compressed_io_options["hdf5:dataset"] = optarg;
+        compressed_io_options.emplace("hdf5:dataset", optarg);
         break;
       case 'S':
         if(decompressed_io_format || decompressed_io_format=="posix") decompressed_io_format = "hdf5";
-        decompressed_io_options["hdf5:dataset"] = optarg;
+        decompressed_io_options.emplace("hdf5:dataset", optarg);
         break;
       case 't':
         type = parse_type(optarg);

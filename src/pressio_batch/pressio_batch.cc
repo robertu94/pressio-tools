@@ -31,6 +31,12 @@ main(int argc, char* argv[])
     auto input = dataset->load();
     for (auto& compressor_factory : compressor_configs) {
       auto compressor = compressor_factory->load(library);
+
+      std::string task_name = dataset->get_name() + "," + compressor_factory->get_name();
+      pressio_options* configuration_name = pressio_options_new();
+      pressio_options_set_string(configuration_name, "external:config_name", task_name.c_str());
+      pressio_metrics_set_options(metrics, configuration_name);
+      pressio_options_free(configuration_name);
       pressio_compressor_set_metrics(compressor, metrics);
 
       for (int i = 0; i < args.replicats; ++i) {
@@ -70,7 +76,7 @@ main(int argc, char* argv[])
           std::cout << std::endl;
         }
         output_csv(std::cout,
-                   dataset->get_name() + "," + compressor_factory->get_name(),
+                   task_name,
                    metrics_results, args.fields);
         pressio_options_free(metrics_results);
         pressio_data_free(compressed);
