@@ -1,3 +1,3 @@
 add_executable(find_interesting_points find_interesting_points.cc)
 target_link_libraries(find_interesting_points PRIVATE
-  SZ LibPressioOpt::libpressio_opt LibDistributed::libdistributed)
+  LibPressioOpt::libpressio_opt LibDistributed::libdistributed)
