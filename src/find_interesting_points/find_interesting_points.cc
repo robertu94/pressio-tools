@@ -1,7 +1,6 @@
 #include <iostream>
 #include <mpi.h>
 #include <vector>
-#include <libpressio_opt_ext/impl/pressio_data_utilities.h>
 #include <libpressio_ext/cpp/libpressio.h>
 #include <pressio_search_defines.h>
 #include <libpressio_ext/io/pressio_io.h>
