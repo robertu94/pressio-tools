@@ -5,7 +5,6 @@
 #include <libpressio_ext/cpp/libpressio.h>
 #include <pressio_search_defines.h>
 #include <libpressio_ext/io/pressio_io.h>
-#include <sz.h>
 
 
 double run_lossless(pressio_options* opt_options, pressio_metrics* metrics, pressio_data* input) {
@@ -93,7 +92,7 @@ int main(int argc, char *argv[])
   opt_options.set("opt:do_decompress", 0);
   opt_options.set("opt:search_metrics", "progress_printer");
   opt_options.set("opt:do_decompress", 1);
-  opt_options.set("sz:error_bound_mode", REL);
+  opt_options.set("sz:error_bound_mode_str", "REL");
 
   auto lossless = run_lossless(&opt_options, &metrics, input);
   auto near_lossless = find_target(&compressor, input, lossless * .98);
