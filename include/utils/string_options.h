@@ -1,6 +1,5 @@
 #include <map>
-#include <pressio_options.h>
-#include <pressio_option.h>
+#include <libpressio_ext/cpp/options.h>
 
-struct pressio_options* options_from_multimap(std::multimap<std::string,std::string> const& map);
+pressio_options options_from_multimap(std::multimap<std::string,std::string> const& map);
 

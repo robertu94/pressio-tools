@@ -1,27 +1,34 @@
 #include "cmdline.h"
 #include <iostream>
+#include <memory>
+#include <optional>
+#include <utility>
 #include <vector>
 #include <unistd.h>
+#include <mpi.h>
 
 #include <libpressio.h>
 #include <libpressio_ext/cpp/options.h>
 #include <libpressio_ext/cpp/pressio.h>
 #include <libpressio_ext/cpp/printers.h>
-#include <libpressio_ext/cpp/io.h>
 #include <libpressio_ext/io/pressio_io.h>
 
 
 #include "utils/fuzzy_matcher.h"
 #include <utils/string_options.h>
 
-
 namespace {
+
+static int cmdline_rank = 0;
+
 void
 usage()
 {
-  std::cerr << R"(pressio [args] [compressor]
+  if(cmdline_rank == 0) {
+    std::cerr << R"(pressio [args] [compressor]
 operations:
 -a <action> the actions to preform: compress, decompress, version, settings, default=compress+decompress
+-Q enable fully-qualified mode, this will change the names of options for compressors
 
 input datasets:
 -d <dim> dimension of the dataset
@@ -32,6 +39,8 @@ input datasets:
 -U <option_key> prints this option after setting it, defaults none, "all" prints all options for the input (uncompressed) file
 -T <format> set the input format
 
+-p indicates that all subsequent input dataset arguments are for the "next buffer"
+
 output datasets:
 
 -f <format> compressed file format
@@ -39,6 +48,7 @@ output datasets:
 -s <compressed_file_dataset> use HDF output for the compressed file
 -y <option>=<value> pass the specified option to the generic IO plugin for the compressed file
 -z <option_key> prints this option after setting it, defaults none, "all" prints all options for the compressed file
+-k <num> number of compressed data datasets to pass to compress, defaults to the number of "-p" flags passed + 1
 
 -F <format> decompressed file format
 -W <decompressed_file> use POSIX if format is not set
@@ -62,11 +72,11 @@ configuration:
 
 compressors: )";
 
-  auto* pressio = pressio_instance();
-  std::cerr << pressio_supported_compressors() << std::endl;
-  std::cerr << "io: " << pressio_supported_io_modules() << std::endl;
-  std::cerr << "metrics: " << pressio_supported_metrics() << std::endl;
-
+    auto* pressio = pressio_instance();
+    std::cerr << pressio_supported_compressors() << std::endl;
+    std::cerr << "io: " << pressio_supported_io_modules() << std::endl;
+    std::cerr << "metrics: " << pressio_supported_metrics() << std::endl;
+  }
 }
 
 pressio_dtype
@@ -101,8 +111,10 @@ parse_type(std::string const& optarg_s)
         (void)0;
     }
   }
-  std::cerr << "invalid type: " << optarg_s << std::endl;
-  usage();
+  if(cmdline_rank == 0) {
+    std::cerr << "invalid type: " << optarg_s << std::endl;
+    usage();
+  }
   exit(EXIT_FAILURE);
 }
 
@@ -146,46 +158,81 @@ Action parse_action(std::string const& action) {
 
 }
 
-pressio_io* make_io(std::string const& format, std::multimap<std::string, std::string> const& format_options)
-{
-  auto library = pressio_instance();
-  auto io = pressio_get_io(library, format.c_str());
-  if(io == nullptr) {
-    std::cerr << "failed to get io module " << format << std::endl;
-    exit(EXIT_FAILURE);
+class io_builder {
+  public:
+  void set_format(std::string const& format) {
+    io_format = format;
   }
-  auto options = pressio_io_get_options(io);
-  auto format_pressio_options = options_from_multimap(format_options);
-  for (auto const& key_value : *format_pressio_options) {
-    if(pressio_options_cast_set(options, key_value.first.c_str(), &key_value.second, pressio_conversion_special) != pressio_options_key_set) {
-      std::cerr << "failed to set" << key_value.first << " to " << key_value.second << std::endl;
-      exit(EXIT_FAILURE);
+
+  template <class Predicate>
+  void set_format_if(std::string const& format, Predicate predicate) {
+    if(!io_format || predicate(*io_format)) {
+      io_format = format;
     }
   }
-  pressio_io_set_options(io, options);
+  void set_format_if(std::string const& format) {
+    set_format_if(format, [](std::string const&){return false;});
+  }
 
-  pressio_release(library);
-  return io;
-}
+  void set_type(pressio_dtype dtype) {
+    type = dtype;
+  }
+  void push_dim(size_t dim) {
+    dims.push_back(dim);
+  }
+  template <class... T>
+  void emplace_option(T&&... setting) {
+    io_options.emplace(std::forward<T>(setting)...);
+  }
+
+  pressio_io make_io() const {
+    auto library = pressio();
+    auto io_format_str = io_format.value_or("noop");
+    pressio_io io = library.get_io(io_format_str);
+    if(!io) {
+      std::cerr << "failed to get io module " << io_format_str << std::endl;
+      exit(EXIT_FAILURE);
+    }
+    auto options = io->get_options();
+    auto format_pressio_options = options_from_multimap(io_options);
+    for (auto const& key_value : format_pressio_options) {
+      if(options.cast_set(key_value.first, key_value.second, pressio_conversion_special) != pressio_options_key_set) {
+        std::cerr << "failed to set" << key_value.first << " to " << key_value.second << std::endl;
+        exit(EXIT_FAILURE);
+      }
+    }
+    io->set_options(options);
+    return io;
+  }
+  std::unique_ptr<pressio_data> make_input_desc() const {
+    return (type && !dims.empty())
+      ? std::make_unique<pressio_data>(pressio_data::owning(*type, dims.size(), dims.data()))
+      : std::unique_ptr<pressio_data>(nullptr);
+  };
+
+  private:
+  std::optional<pressio_dtype> type;
+  std::vector<size_t> dims;
+  std::optional<std::string> io_format;
+  std::multimap<std::string, std::string> io_options;
+};
+
 }
 
-options
+cmdline_options
 parse_args(int argc, char* argv[])
 {
+  MPI_Comm_rank(MPI_COMM_WORLD, &cmdline_rank);
+
   int opt;
-  options opts;
-  std::vector<size_t> dims;
-  std::optional<pressio_dtype> type;
+  cmdline_options opts;
   std::set<Action> actions;
 
-  std::optional<std::string> input_io_format;
-  std::optional<std::string> compressed_io_format;
-  std::optional<std::string> decompressed_io_format;
-  std::multimap<std::string, std::string> input_io_options;
-  std::multimap<std::string, std::string> decompressed_io_options;
-  std::multimap<std::string, std::string> compressed_io_options;
+  std::vector<io_builder> input_builder(1);
+  std::vector<io_builder> compressed_builder(1);
+  std::vector<io_builder> decompressed_builder(1);
 
-  while ((opt = getopt(argc, argv, "a:b:d:t:i:I:u:U:T:f:w:s:y:z:F:W:S:Y:Z:m:M:n:N:o:O:C:")) != -1) {
+  while ((opt = getopt(argc, argv, "a:b:d:t:i:I:u:U:T:f:w:s:y:z:F:W:S:Y:Z:m:M:n:N:o:pO:C:Q")) != -1) {
     switch (opt) {
       case 'a':
         actions.emplace(parse_action(optarg));
@@ -197,21 +244,24 @@ parse_args(int argc, char* argv[])
         opts.print_compile_options.emplace(optarg);
         break;
       case 'd':
-        dims.push_back(std::stoull(optarg));
+        input_builder.back().push_dim(std::stoull(optarg));
         break;
       case 'f':
-        compressed_io_format = optarg;
+        compressed_builder.back().set_format(optarg);
         break;
       case 'F':
-        decompressed_io_format = optarg;
+        decompressed_builder.back().set_format(optarg);
         break;
       case 'i':
-        if(!input_io_format) input_io_format = "posix";
-        input_io_options.emplace("io:path", optarg);
+        input_builder.back().set_format_if("posix");
+        input_builder.back().emplace_option("io:path", optarg);
         break;
       case 'I':
-        if(input_io_format || input_io_format=="posix") input_io_format = "hdf5";
-        input_io_options.emplace("hdf5:dataset", optarg);
+        input_builder.back().set_format_if("hdf5", [](std::string const& s) {return s == "posix";});
+        input_builder.back().emplace_option("hdf5:dataset", optarg);
+        break;
+      case 'k':
+        opts.num_compressed = std::stoull(optarg);
         break;
       case 'm':
         opts.metrics_ids.push_back(optarg);
@@ -231,39 +281,47 @@ parse_args(int argc, char* argv[])
       case 'O':
         opts.print_options.emplace(optarg);
         break;
+      case 'p':
+        input_builder.emplace_back();
+        compressed_builder.emplace_back();
+        decompressed_builder.emplace_back();
+        break;
       case 'w':
-        if(!compressed_io_format) compressed_io_format = "posix";
-        compressed_io_options.emplace("io:path", optarg);
+        compressed_builder.back().set_format_if("posix");
+        compressed_builder.back().emplace_option("io:path", optarg);
         break;
       case 'W':
-        if(!decompressed_io_format) decompressed_io_format = "posix";
-        decompressed_io_options.emplace("io:path", optarg);
+        decompressed_builder.back().set_format_if("posix");
+        decompressed_builder.back().emplace_option("io:path", optarg);
+        break;
+      case 'Q':
+        opts.qualified_prefix = "pressio";
         break;
       case 's':
-        if(compressed_io_format || compressed_io_format=="posix") compressed_io_format = "hdf5";
-        compressed_io_options.emplace("hdf5:dataset", optarg);
+        compressed_builder.back().set_format_if("hdf5", [](std::string const& s) {return s == "posix";});
+        compressed_builder.back().emplace_option("hdf5:dataset", optarg);
         break;
       case 'S':
-        if(decompressed_io_format || decompressed_io_format=="posix") decompressed_io_format = "hdf5";
-        decompressed_io_options.emplace("hdf5:dataset", optarg);
+        decompressed_builder.back().set_format_if("hdf5", [](std::string const& s) {return s == "posix";});
+        decompressed_builder.back().emplace_option("hdf5:dataset", optarg);
         break;
       case 't':
-        type = parse_type(optarg);
+        input_builder.back().set_type(parse_type(optarg));
         break;
       case 'T':
-        input_io_format = optarg;
+        input_builder.back().set_format(optarg);
         break;
       case 'u':
-        input_io_options.emplace(parse_option(optarg));
+        input_builder.back().emplace_option(parse_option(optarg));
         break;
       case 'U':
         opts.print_io_input_options.emplace(optarg);
         break;
       case 'y':
-        compressed_io_options.emplace(parse_option(optarg));
+        compressed_builder.back().emplace_option(parse_option(optarg));
         break;
       case 'Y':
-        decompressed_io_options.emplace(parse_option(optarg));
+        decompressed_builder.back().emplace_option(parse_option(optarg));
         break;
       case 'z':
         opts.print_io_comp_options.emplace(optarg);
@@ -276,16 +334,15 @@ parse_args(int argc, char* argv[])
         exit(EXIT_FAILURE);
     }
   }
-  if (actions.empty()) opts.actions = {Action::Compress, Action::Decompress};
+  if (actions.empty()) opts.actions = {Action::Compress, Action::Decompress, Action::Settings};
   else opts.actions = std::move(actions);
 
-  if(opts.actions.find(Action::Compress) != actions.end() or 
-      opts.actions.find(Action::Settings) != actions.end() or 
-      opts.actions.find(Action::Decompress) != actions.end()
-      ) {
+  if(contains_one_of(opts.actions, Action::Compress, Action::Settings, Action::Decompress)) {
     if(optind >= argc) {
-      std::cerr << "expected positional arguments" << std::endl;
-      usage();
+      if(cmdline_rank == 0) {
+        std::cerr << "expected positional arguments" << std::endl;
+        usage();
+      }
       exit(EXIT_FAILURE);
     } else {
       opts.compressor = argv[optind++];
@@ -293,19 +350,28 @@ parse_args(int argc, char* argv[])
   }
 
 
-  pressio_data* input_desc = (type && !dims.empty())? pressio_data_new_owning(*type, dims.size(), dims.data()): nullptr;
-  opts.input_file_action = make_io(input_io_format.value_or("noop"), input_io_options);
-  opts.input = pressio_io_read(opts.input_file_action, input_desc);
-  if(opts.input == nullptr and (
-    opts.actions.find(Action::Compress) != opts.actions.end() or
-    opts.actions.find(Action::Decompress) != opts.actions.end()
-    )) {
-    std::cerr << "failed to read input file " << pressio_io_error_msg(opts.input_file_action) << std::endl;
-    usage();
-    exit(EXIT_FAILURE);
+  for (auto const& input_buffer : input_builder) {
+    opts.input_file_action.emplace_back(input_buffer.make_io());
+    pressio_data* read_data = opts.input_file_action.back()->read(input_buffer.make_input_desc().release());
+    if(contains_one_of(opts.actions, Action::Compress, Action::Decompress)) {
+      if(read_data == nullptr) {
+        if(cmdline_rank == 0) {
+          std::cerr << "failed to read input file " << pressio_io_error_msg(&opts.input_file_action.back()) << std::endl;
+          usage();
+        }
+        exit(EXIT_FAILURE);
+      } else {
+        opts.input.emplace_back(std::move(*read_data));
+      }
+    }
   }
 
-  opts.compressed_file_action = make_io(compressed_io_format.value_or("noop"), compressed_io_options);
-  opts.decompressed_file_action = make_io(decompressed_io_format.value_or("noop"), decompressed_io_options);
+
+  for(size_t i = 0; i < compressed_builder.size(); ++i) {
+    opts.compressed_file_action.emplace_back(compressed_builder[i].make_io());
+  }
+  for (size_t i = 0; i < decompressed_builder.size(); ++i) {
+    opts.decompressed_file_action.emplace_back(decompressed_builder[i].make_io());
+  }
   return opts;
 }

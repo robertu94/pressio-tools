@@ -4,10 +4,12 @@
 #include <map>
 #include <vector>
 #include <optional>
+#include <memory>
 #include <functional>
 #include <pressio_data.h>
 #include <libpressio_ext/io/pressio_io.h>
-
+#include <libpressio_ext/cpp/data.h>
+#include <libpressio_ext/cpp/io.h>
 
 enum class Action
 {
@@ -17,7 +19,18 @@ enum class Action
   Settings
 };
 
-struct options
+template <class Set, class Item>
+bool contains(Set const& set, Item const& item) {
+  return set.find(item) != set.end();
+}
+
+template <class Set, class... Items>
+bool contains_one_of(Set const& set, Items const&... items) {
+  return (contains(set, items) || ...);
+}
+
+
+struct cmdline_options
 {
   std::set<Action> actions;
   std::multimap<std::string, std::string> early_options;
@@ -32,12 +45,14 @@ struct options
   std::set<const char*> print_io_input_options;
   std::set<const char*> print_io_decomp_options;
   std::set<const char*> print_io_comp_options;
-  pressio_data* input = nullptr;
-  pressio_io* input_file_action;
-  pressio_io* compressed_file_action;
-  pressio_io* decompressed_file_action;
+  std::vector<pressio_data> input;
+  std::vector<pressio_io> input_file_action;
+  std::vector<pressio_io> compressed_file_action;
+  std::vector<pressio_io> decompressed_file_action;
+  std::optional<std::string> qualified_prefix;
+  std::optional<size_t> num_compressed;
 };
 
-options parse_args(int argc, char* argv[]);
+cmdline_options parse_args(int argc, char* argv[]);
 
 #endif /*PRESSIO_TOOLS_CMDLINE*/

@@ -31,10 +31,10 @@ struct metrics_config_impl : public metrics_config {
     pressio_options* options = pressio_metrics_get_options(metric);
 
     auto early_opts = options_from_multimap(early_metrics_options);
-    pressio_metrics_set_options(metric, early_opts);
+    pressio_metrics_set_options(metric, &early_opts);
 
     auto metric_opts = options_from_multimap(metrics_options);
-    for (auto const& option_pair : *metric_opts) {
+    for (auto const& option_pair : metric_opts) {
       if(pressio_options_cast_set(options, option_pair.first.c_str(), &option_pair.second, pressio_conversion_special)) {
         pressio_options_free(options);
         pressio_metrics_free(metric);
@@ -42,8 +42,6 @@ struct metrics_config_impl : public metrics_config {
       }
     }
     pressio_metrics_set_options(metric, options);
-    pressio_options_free(metric_opts);
-
     return metric;
   }
 };

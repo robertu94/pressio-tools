@@ -1,4 +1,5 @@
 #include <iostream>
+#include <libpressio_ext/cpp/configurable.h>
 #include <string>
 #include <sstream>
 #include <utility>
@@ -6,39 +7,44 @@
 #include <mpi.h>
 #include <libpressio/libpressio.h>
 #include <libpressio/libpressio_ext/io/pressio_io.h>
+#include <libpressio/libpressio_ext/cpp/io.h>
 #include <libpressio/libpressio_ext/cpp/options.h>
 #include <libpressio/libpressio_ext/cpp/printers.h>
+#include <libpressio/libpressio_ext/cpp/compressor.h>
+#include <libpressio/libpressio_ext/cpp/metrics.h>
+#include <libpressio/libpressio_ext/cpp/pressio.h>
+#include <libpressio/libpressio_ext/cpp/serializable.h>
 
 #include <utils/string_options.h>
 #include "cmdline.h"
 
 static int rank = 0;
 
-void print_versions(pressio* library) {
+void print_versions(pressio& library) {
   if(rank == 0) {
     std::cerr << "libpressio version: " << pressio_version() << std::endl;
     std::istringstream compressors{std::string(pressio_supported_compressors())};
     std::string compressor;
     while(compressors >> compressor)
     {
-      auto* cmp = pressio_get_compressor(library, compressor.c_str());
-      std::cerr << compressor << ' ' << pressio_compressor_version(cmp) << std::endl;
+      auto cmp = library.get_compressor(compressor);
+      std::cerr << compressor << ' ' << cmp->version() << std::endl;
     }
   }
 }
 
 template <class ForwardIt>
-void print_selected_options(pressio_options* options, ForwardIt begin, ForwardIt end) {
+void print_selected_options(pressio_options const& options, ForwardIt begin, ForwardIt end) {
   if(rank == 0) {
   std::for_each(
       begin,
       end,
       [options](std::string const option){
         if (option == "all") {
-          std::cerr << (*options);
+          std::cerr << (options);
         } else { 
           try {
-            std::cerr << option << options->get(option) << std::endl;
+            std::cerr << option << options.get(option) << std::endl;
           } catch(std::out_of_range const&) {
             std::cerr << ": option is unknown" << std::endl;
             exit(EXIT_FAILURE);
@@ -48,38 +54,17 @@ void print_selected_options(pressio_options* options, ForwardIt begin, ForwardIt
   }
 }
 
-
-std::tuple<pressio_compressor*, pressio_metrics*, pressio_options*> setup_compressor(struct pressio* pressio, options opts) {
-  auto* compressor = pressio_get_compressor(pressio, opts.compressor.c_str());
-  if (compressor == nullptr) {
-    if(rank == 0) {
-    std::cerr << "failed to initialize the compressor: " << compressor << std::endl;
-    std::cerr << pressio_error_msg(pressio) << std::endl;
-    }
-    exit(pressio_error_code(pressio));
-  }
-
-  auto* metrics = pressio_new_metrics(pressio, opts.metrics_ids.data(), opts.metrics_ids.size());
-  if (metrics == nullptr) {
-    if(rank == 0) {
-    std::cerr << "failed to initialize the metrics" << std::endl;
-    std::cerr << pressio_error_msg(pressio) << std::endl;
-    }
-    exit(pressio_error_code(pressio));
-  }
-  pressio_options* metrics_options = pressio_metrics_get_options(metrics);
-  auto metric_opts = options_from_multimap(opts.metrics_options);
-  for(auto const& [setting, value]: *metric_opts) {
-    auto status = pressio_options_cast_set(metrics_options,
-        setting.c_str(),
-        &value,
-        pressio_conversion_special
-        );
+template <class MultiMap>
+void set_options_from_multimap(pressio_configurable& c, MultiMap const& user_options, const char* configurable_type) {
+  pressio_options c_options = c.get_options();
+  auto metric_opts = options_from_multimap(user_options);
+  for(auto const& [setting, value]: metric_opts) {
+    auto status = c_options.cast_set(setting, value, pressio_conversion_special);
     switch(status) {
       case pressio_options_key_does_not_exist:
         {
           if(rank == 0) {
-            std::cerr << "non existent option for the metric: " << setting  << std::endl;
+            std::cerr << "non existent option for the " << configurable_type << " : " << setting  << std::endl;
           }
           exit(EXIT_FAILURE);
         }
@@ -94,95 +79,113 @@ std::tuple<pressio_compressor*, pressio_metrics*, pressio_options*> setup_compre
         (void)0;
     }
   }
-  pressio_metrics_set_options(metrics, metrics_options);
-  pressio_compressor_set_metrics(compressor, metrics);
-  pressio_options_free(metric_opts);
-
-  pressio_options* early_compressor_options = options_from_multimap(opts.early_options);
-  if (pressio_compressor_check_options(compressor, early_compressor_options)) {
-    if(rank == 0) {
-      std::cerr << pressio_compressor_error_msg(compressor) << std::endl;
-    }
-    exit(pressio_compressor_error_code(compressor));
-  }
-  if (pressio_compressor_set_options(compressor, early_compressor_options)) {
-    if(rank == 0) {
-      std::cerr << pressio_compressor_error_msg(compressor) << std::endl;
-    }
-    exit(pressio_compressor_error_code(compressor));
-  }
-
-  auto* compressor_options = pressio_compressor_get_options(compressor);
-  auto pressio_opts = options_from_multimap(opts.options);
-  for(auto const& [setting, value]: *pressio_opts) {
-    auto status = pressio_options_cast_set(compressor_options,
-        setting.c_str(),
-        &value,
-        pressio_conversion_special
-        );
-    switch(status) {
-      case pressio_options_key_does_not_exist:
-        if(rank == 0) {
-          std::cerr << "non existent option for the compressor: " << setting  << std::endl;
-        }
-        exit(EXIT_FAILURE);
-      case pressio_options_key_exists:
-        if(rank == 0) {
-          std::cerr << "cannot convert to correct type: " << value << " for setting " << setting  << std::endl;
-        }
-        exit(EXIT_FAILURE);
-      default:
-        (void)0;
-    }
-  }
-  pressio_options_free(pressio_opts);
-  
-  if (pressio_compressor_check_options(compressor, compressor_options)) {
-    if(rank == 0) {
-      std::cerr << pressio_compressor_error_msg(compressor) << std::endl;
-    }
-    exit(pressio_compressor_error_code(compressor));
-  }
-  if (pressio_compressor_set_options(compressor, compressor_options)) {
-    if(rank == 0) {
-      std::cerr << pressio_compressor_error_msg(compressor) << std::endl;
-    }
-    exit(pressio_compressor_error_code(compressor));
-  }
-  pressio_options_free(compressor_options);
-  //meta-compressors need their options called twice to get the complete list of options
-  compressor_options = pressio_compressor_get_options(compressor);
-    
-
-  return {compressor, metrics, compressor_options};
+  c.set_options(c_options);
 }
 
-pressio_data* compress(struct pressio_compressor* compressor, options const& opts) {
-
-  auto* compressed = pressio_data_new_empty(pressio_byte_dtype, 0, nullptr);
-  if (pressio_compressor_compress(compressor, opts.input, compressed)) {
+template <class PressioObject, class MultiMap>
+void set_early_options(PressioObject& c, MultiMap const& user_options) {
+  pressio_options early_compressor_options = options_from_multimap(user_options);
+  if (c.check_options(early_compressor_options)) {
     if(rank == 0) {
-      std::cerr << pressio_compressor_error_msg(compressor) << std::endl;
+      std::cerr << c.error_msg() << std::endl;
     }
-    exit(pressio_compressor_error_code(compressor));
+    exit(c.error_code());
+  }
+  if (c.set_options(early_compressor_options)) {
+    if(rank == 0) {
+      std::cerr << c.error_msg() << std::endl;
+    }
+    exit(c.error_code());
+  }
+}
+
+
+pressio_compressor setup_compressor(pressio& library, cmdline_options const& opts) {
+  pressio_compressor compressor = library.get_compressor(opts.compressor);
+  if (!compressor) {
+    if(rank == 0) {
+    std::cerr << "failed to initialize the compressor: " << opts.compressor << std::endl;
+    std::cerr << library.err_msg() << std::endl;
+    }
+    exit(library.err_code());
+  }
+
+  pressio_metrics metrics = library.get_metrics(std::begin(opts.metrics_ids), std::end(opts.metrics_ids));
+  if (!metrics) {
+    if(rank == 0) {
+    std::cerr << "failed to initialize the metrics" << std::endl;
+    std::copy(std::begin(opts.metrics_ids),
+              std::end(opts.metrics_ids),
+              std::ostream_iterator<const char*>(std::cerr, " "));
+    std::cerr << library.err_msg() << std::endl;
+    }
+    exit(library.err_code());
+  }
+
+  set_options_from_multimap(*metrics, opts.metrics_options, "metrics");
+  compressor->set_metrics(metrics);
+
+
+  set_early_options(*compressor, opts.early_options);
+  set_options_from_multimap(*compressor, opts.options, "compressor");
+
+  return compressor;
+}
+
+std::vector<pressio_data> compress(struct pressio_compressor& compressor, cmdline_options const& opts) {
+
+  std::vector<pressio_data> compressed(opts.num_compressed.value_or(opts.input.size()), pressio_data::empty(pressio_byte_dtype, 0, nullptr));
+  std::vector<const pressio_data*> inputs_ptrs(opts.input.size());
+  std::vector<pressio_data*> compressed_ptrs(compressed.size());
+  for (size_t i = 0; i < inputs_ptrs.size(); ++i) {
+    inputs_ptrs[i] = &opts.input[i];
+  }
+  for (size_t i = 0; i < compressed_ptrs.size(); ++i) {
+    compressed_ptrs[i] = &compressed[i];
+  }
+
+
+  if (compressor->compress_many(
+        compat::data(inputs_ptrs),
+        compat::data(inputs_ptrs) + compat::size(inputs_ptrs),
+        compat::data(compressed_ptrs),
+        compat::data(compressed_ptrs) + compat::size(compressed_ptrs)
+        )) {
+    if(rank == 0) {
+      std::cerr << compressor->error_msg() << std::endl;
+    }
+    exit(compressor->error_code());
   }
   return compressed;
 }
 
-pressio_data* decompress(struct pressio_compressor* compressor, pressio_data* compressed,  options const& opts) {
+std::vector<pressio_data> decompress(struct pressio_compressor& compressor, std::vector<pressio_data> const& compressed,  cmdline_options const& opts) {
+  std::vector<pressio_data> output_buffer;
+  std::vector<const pressio_data*> compressed_ptrs(compressed.size());
+  std::vector<pressio_data*> output_buffer_ptrs;
+  for (size_t i = 0; i < compressed.size(); ++i) {
+    compressed_ptrs[i] = &compressed[i];
+  }
+  for (auto const& input : opts.input) {
+    output_buffer.emplace_back(pressio_data::clone(input));
+  }
+  for (auto& output: output_buffer) {
+    output_buffer_ptrs.emplace_back(&output);
+  }
 
-
-  auto* output_buffer = pressio_data_new_clone(opts.input);
-  if (pressio_compressor_decompress(compressor, compressed, output_buffer)) {
+  if (compressor->decompress_many(
+        compat::data(compressed_ptrs),
+        compat::data(compressed_ptrs) + compat::size(compressed_ptrs),
+        output_buffer_ptrs.data(),
+        compat::data(output_buffer_ptrs) + compat::size(output_buffer_ptrs)
+        )) {
     if(rank == 0) {
-      std::cerr << pressio_compressor_error_msg(compressor) << std::endl;
+      std::cerr << compressor->error_msg() << std::endl;
     }
-    exit(pressio_compressor_error_code(compressor));
+    exit(compressor->error_code());
   }
   return output_buffer;
-
 }
-
 
 int
 main(int argc, char* argv[])
@@ -190,97 +193,69 @@ main(int argc, char* argv[])
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   auto opts = parse_args(argc, argv);
-  auto* pressio = pressio_instance();
-  if(pressio == nullptr) {
-    if(rank == 0) {
-      std::cerr << "failed to initialize libpressio" << std::endl;
-    }
-    exit(EXIT_FAILURE);
-  }
+  pressio library;
 
   if(opts.actions.find(Action::Version) != opts.actions.end()) {
-    print_versions(pressio);
+    print_versions(library);
   }
 
-  if (opts.actions.find(Action::Compress) != opts.actions.end() or
-      opts.actions.find(Action::Decompress) != opts.actions.end() or
-      opts.actions.find(Action::Settings) != opts.actions.end()
-      ) {
+  if (contains_one_of(opts.actions, Action::Compress, Action::Decompress, Action::Settings)) {
 
-    auto [compressor, metrics, options] = setup_compressor(pressio, opts);
-    pressio_data* compressed = nullptr;
-    pressio_data* decompressed = nullptr;
+    auto compressor = setup_compressor(library, opts);
+    auto options = compressor->get_options();
+    auto metrics = compressor->get_metrics();
+    std::vector<pressio_data> compressed;
+    std::vector<pressio_data> decompressed;
 
-    if (opts.actions.find(Action::Settings) != opts.actions.end()) {
+    if (contains(opts.actions, Action::Settings)) {
       print_selected_options(options, std::begin(opts.print_options), std::end(opts.print_options));
+      print_selected_options(compressor->get_configuration(), std::begin(opts.print_compile_options), std::end(opts.print_compile_options));
+      print_selected_options(metrics->get_options(), std::begin(opts.print_metrics_options), std::end(opts.print_metrics_options));
 
-      pressio_options* configuration = pressio_compressor_get_configuration(compressor);
-      print_selected_options(configuration, std::begin(opts.print_compile_options), std::end(opts.print_compile_options));
-      pressio_options_free(configuration);
-
-      pressio_options* metrics_options = pressio_compressor_metrics_get_options(compressor);
-      print_selected_options(metrics_options, std::begin(opts.print_metrics_options), std::end(opts.print_metrics_options));
-      pressio_options_free(metrics_options);
-
-      pressio_options* input_options = pressio_io_get_options(opts.input_file_action);
-      print_selected_options(input_options, std::begin(opts.print_io_input_options), std::end(opts.print_io_input_options));
-      pressio_options_free(input_options);
-      
-      pressio_options* comp_options = pressio_io_get_options(opts.compressed_file_action);
-      print_selected_options(comp_options, std::begin(opts.print_io_comp_options), std::end(opts.print_io_comp_options));
-      pressio_options_free(comp_options);
-
-      pressio_options* decomp_options = pressio_io_get_options(opts.decompressed_file_action);
-      print_selected_options(decomp_options, std::begin(opts.print_io_decomp_options), std::end(opts.print_io_decomp_options));
-      pressio_options_free(decomp_options);
-
+      for (const auto& input_file_action : opts.input_file_action) {
+        print_selected_options(input_file_action->get_options(), std::begin(opts.print_io_input_options), std::end(opts.print_io_input_options));
+      }
+      for (auto const& compressed_file_action : opts.compressed_file_action) {
+        print_selected_options(compressed_file_action->get_options(), std::begin(opts.print_io_comp_options), std::end(opts.print_io_comp_options));
+      }
+      for (auto const& decompressed_file_action : opts.decompressed_file_action) {
+        print_selected_options(decompressed_file_action->get_options(), std::begin(opts.print_io_decomp_options), std::end(opts.print_io_decomp_options));
+      }
     }
     
-    if (opts.actions.find(Action::Compress) != opts.actions.end()) {
+    if (contains(opts.actions, Action::Compress)) {
       compressed = compress(compressor, opts);
-      if (auto result = pressio_io_write(opts.compressed_file_action,compressed)) {
+
+      for (size_t i = 0; i < compressed.size(); ++i ) {
+        if (auto result = pressio_io_write(&opts.compressed_file_action[i], &compressed[i])) {
+          if(rank == 0) {
+            std::cerr << "writing compressed file failed " << pressio_io_error_msg(&opts.compressed_file_action[i]) << std::endl;
+          }
+          exit(EXIT_FAILURE);
+        }
+      }
+
+    } else if (contains(opts.actions, Action::Decompress)) {
+      for (auto const& i: opts.input) {
+        compressed.emplace_back(pressio_data::nonowning(i.dtype(), i.data(), i.dimensions()));
+      }
+    }
+
+    if (contains(opts.actions, Action::Decompress)) {
+      distributed::comm::bcast(compressed, 0, MPI_COMM_WORLD);
+      decompressed = decompress(compressor, compressed, opts);
+    }
+    for (size_t i = 0; i < decompressed.size(); ++i) {
+      if (auto result = pressio_io_write(&opts.decompressed_file_action[i], &decompressed[i])) {
         if(rank == 0) {
-          std::cerr << "writing compressed file failed " << pressio_io_error_msg(opts.compressed_file_action) << std::endl;
+          std::cerr << "writing decompressed file failed " << pressio_io_error_msg(&opts.decompressed_file_action[i]) << std::endl;
         }
         exit(EXIT_FAILURE);
       }
-    } else if (opts.actions.find(Action::Decompress) != opts.actions.end()) {
-      std::vector<size_t> dims;
-      for (size_t i = 0; i < pressio_data_num_dimensions(opts.input); ++i) {
-        dims.push_back(pressio_data_get_dimension(opts.input, i));
-      }
-      compressed = pressio_data_new_nonowning(
-          pressio_data_dtype(opts.input),
-          pressio_data_ptr(opts.input,nullptr),
-          dims.size(),
-          dims.data()
-          );
     }
 
-    if (opts.actions.find(Action::Decompress) != opts.actions.end()) {
-      decompressed = decompress(compressor, compressed, opts);
-    }
-    if (auto result = pressio_io_write(opts.decompressed_file_action,decompressed)) {
-      if(rank == 0) {
-        std::cerr << "writing decompressed file failed " << pressio_io_error_msg(opts.decompressed_file_action) << std::endl;
-      }
-      exit(EXIT_FAILURE);
-    }
-
-    auto* metrics_results = pressio_compressor_get_metrics_results(compressor);
-    print_selected_options(metrics_results, std::begin(opts.print_metrics), std::end(opts.print_metrics));
-    pressio_options_free(metrics_results);
-
-    pressio_data_free(compressed);
-    pressio_data_free(decompressed);
-    pressio_metrics_free(metrics);
-    pressio_options_free(options);
-    pressio_compressor_release(compressor);
+    print_selected_options(compressor->get_metrics_results(), std::begin(opts.print_metrics), std::end(opts.print_metrics));
   }
-
-  pressio_data_free(opts.input);
-
-  pressio_release(pressio);
   MPI_Finalize();
   return 0;
 }

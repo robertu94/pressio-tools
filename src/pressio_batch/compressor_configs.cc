@@ -26,7 +26,7 @@ struct compressor_config_impl: public compressor_config {
 
     pressio_options* options = pressio_compressor_get_options(compressor);
     auto config_opts = options_from_multimap(config_options);
-    for (auto& [setting, value] : *config_opts) {
+    for (auto& [setting, value] : config_opts) {
       auto status = pressio_options_cast_set(options, setting.c_str(), &value, pressio_conversion_special);
       if(status != pressio_options_key_set) throw std::runtime_error("failed to assign "s + setting);
     }
@@ -36,7 +36,6 @@ struct compressor_config_impl: public compressor_config {
     if(pressio_compressor_set_options(compressor, options)) {
       throw std::runtime_error("failed to set "s + pressio_compressor_error_msg(compressor));
     }
-    pressio_options_free(config_opts);
     pressio_options_free(options);
     pressio_options_free(early_options);
     return compressor;
