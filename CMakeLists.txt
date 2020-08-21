@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.13)
-project("pressio_tools" VERSION 0.0.2)
+project("pressio_tools" VERSION 0.0.3)
 
 #correct was to set a default build type
 # https://blog.kitware.com/cmake-and-the-default-build-type/

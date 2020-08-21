@@ -14,6 +14,7 @@
 #include <libpressio/libpressio_ext/cpp/metrics.h>
 #include <libpressio/libpressio_ext/cpp/pressio.h>
 #include <libpressio/libpressio_ext/cpp/serializable.h>
+#include <libdistributed_comm.h>
 
 #include <utils/string_options.h>
 #include "cmdline.h"
@@ -109,6 +110,9 @@ pressio_compressor setup_compressor(pressio& library, cmdline_options const& opt
     }
     exit(library.err_code());
   }
+  if(opts.qualified_prefix) {
+    compressor->set_name(*opts.qualified_prefix);
+  }
 
   pressio_metrics metrics = library.get_metrics(std::begin(opts.metrics_ids), std::end(opts.metrics_ids));
   if (!metrics) {
@@ -191,70 +195,72 @@ int
 main(int argc, char* argv[])
 {
   MPI_Init(&argc, &argv);
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  auto opts = parse_args(argc, argv);
-  pressio library;
+  {
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    auto opts = parse_args(argc, argv);
+    pressio library;
 
-  if(opts.actions.find(Action::Version) != opts.actions.end()) {
-    print_versions(library);
-  }
-
-  if (contains_one_of(opts.actions, Action::Compress, Action::Decompress, Action::Settings)) {
-
-    auto compressor = setup_compressor(library, opts);
-    auto options = compressor->get_options();
-    auto metrics = compressor->get_metrics();
-    std::vector<pressio_data> compressed;
-    std::vector<pressio_data> decompressed;
-
-    if (contains(opts.actions, Action::Settings)) {
-      print_selected_options(options, std::begin(opts.print_options), std::end(opts.print_options));
-      print_selected_options(compressor->get_configuration(), std::begin(opts.print_compile_options), std::end(opts.print_compile_options));
-      print_selected_options(metrics->get_options(), std::begin(opts.print_metrics_options), std::end(opts.print_metrics_options));
-
-      for (const auto& input_file_action : opts.input_file_action) {
-        print_selected_options(input_file_action->get_options(), std::begin(opts.print_io_input_options), std::end(opts.print_io_input_options));
-      }
-      for (auto const& compressed_file_action : opts.compressed_file_action) {
-        print_selected_options(compressed_file_action->get_options(), std::begin(opts.print_io_comp_options), std::end(opts.print_io_comp_options));
-      }
-      for (auto const& decompressed_file_action : opts.decompressed_file_action) {
-        print_selected_options(decompressed_file_action->get_options(), std::begin(opts.print_io_decomp_options), std::end(opts.print_io_decomp_options));
-      }
+    if(opts.actions.find(Action::Version) != opts.actions.end()) {
+      print_versions(library);
     }
-    
-    if (contains(opts.actions, Action::Compress)) {
-      compressed = compress(compressor, opts);
 
-      for (size_t i = 0; i < compressed.size(); ++i ) {
-        if (auto result = pressio_io_write(&opts.compressed_file_action[i], &compressed[i])) {
+    if (contains_one_of(opts.actions, Action::Compress, Action::Decompress, Action::Settings)) {
+
+      auto compressor = setup_compressor(library, opts);
+      auto options = compressor->get_options();
+      auto metrics = compressor->get_metrics();
+      std::vector<pressio_data> compressed;
+      std::vector<pressio_data> decompressed;
+
+      if (contains(opts.actions, Action::Settings)) {
+        print_selected_options(options, std::begin(opts.print_options), std::end(opts.print_options));
+        print_selected_options(compressor->get_configuration(), std::begin(opts.print_compile_options), std::end(opts.print_compile_options));
+        print_selected_options(metrics->get_options(), std::begin(opts.print_metrics_options), std::end(opts.print_metrics_options));
+
+        for (const auto& input_file_action : opts.input_file_action) {
+          print_selected_options(input_file_action->get_options(), std::begin(opts.print_io_input_options), std::end(opts.print_io_input_options));
+        }
+        for (auto const& compressed_file_action : opts.compressed_file_action) {
+          print_selected_options(compressed_file_action->get_options(), std::begin(opts.print_io_comp_options), std::end(opts.print_io_comp_options));
+        }
+        for (auto const& decompressed_file_action : opts.decompressed_file_action) {
+          print_selected_options(decompressed_file_action->get_options(), std::begin(opts.print_io_decomp_options), std::end(opts.print_io_decomp_options));
+        }
+      }
+      
+      if (contains(opts.actions, Action::Compress)) {
+        compressed = compress(compressor, opts);
+
+        for (size_t i = 0; i < compressed.size(); ++i ) {
+          if (auto result = pressio_io_write(&opts.compressed_file_action[i], &compressed[i])) {
+            if(rank == 0) {
+              std::cerr << "writing compressed file failed " << pressio_io_error_msg(&opts.compressed_file_action[i]) << std::endl;
+            }
+            exit(EXIT_FAILURE);
+          }
+        }
+
+      } else if (contains(opts.actions, Action::Decompress)) {
+        for (auto const& i: opts.input) {
+          compressed.emplace_back(pressio_data::nonowning(i.dtype(), i.data(), i.dimensions()));
+        }
+      }
+
+      if (contains(opts.actions, Action::Decompress)) {
+        distributed::comm::bcast(compressed, 0, MPI_COMM_WORLD);
+        decompressed = decompress(compressor, compressed, opts);
+      }
+      for (size_t i = 0; i < decompressed.size(); ++i) {
+        if (auto result = pressio_io_write(&opts.decompressed_file_action[i], &decompressed[i])) {
           if(rank == 0) {
-            std::cerr << "writing compressed file failed " << pressio_io_error_msg(&opts.compressed_file_action[i]) << std::endl;
+            std::cerr << "writing decompressed file failed " << pressio_io_error_msg(&opts.decompressed_file_action[i]) << std::endl;
           }
           exit(EXIT_FAILURE);
         }
       }
 
-    } else if (contains(opts.actions, Action::Decompress)) {
-      for (auto const& i: opts.input) {
-        compressed.emplace_back(pressio_data::nonowning(i.dtype(), i.data(), i.dimensions()));
-      }
+      print_selected_options(compressor->get_metrics_results(), std::begin(opts.print_metrics), std::end(opts.print_metrics));
     }
-
-    if (contains(opts.actions, Action::Decompress)) {
-      distributed::comm::bcast(compressed, 0, MPI_COMM_WORLD);
-      decompressed = decompress(compressor, compressed, opts);
-    }
-    for (size_t i = 0; i < decompressed.size(); ++i) {
-      if (auto result = pressio_io_write(&opts.decompressed_file_action[i], &decompressed[i])) {
-        if(rank == 0) {
-          std::cerr << "writing decompressed file failed " << pressio_io_error_msg(&opts.decompressed_file_action[i]) << std::endl;
-        }
-        exit(EXIT_FAILURE);
-      }
-    }
-
-    print_selected_options(compressor->get_metrics_results(), std::begin(opts.print_metrics), std::end(opts.print_metrics));
   }
   MPI_Finalize();
   return 0;
