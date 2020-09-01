@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.13)
-project("pressio_tools" VERSION 0.0.3)
+project("pressio_tools" VERSION 0.0.4)
 
 #correct was to set a default build type
 # https://blog.kitware.com/cmake-and-the-default-build-type/
@@ -25,7 +25,7 @@ find_package(LibDistributed REQUIRED)
 add_library(utils 
   src/utils/string_options.cc
   )
-target_link_libraries(utils PUBLIC LibPressio::libpressio)
+target_link_libraries(utils PUBLIC LibPressio::libpressio LibDistributed::libdistributed)
 target_include_directories(utils PUBLIC include/)
 
 option(LIBPRESSIO_TOOLS_HAS_OPT "require and link to the LibPressioOpt module" OFF)
