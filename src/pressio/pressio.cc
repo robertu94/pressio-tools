@@ -57,10 +57,12 @@ void print_selected_options(pressio_options const& options, ForwardIt begin, For
 
 template <class MultiMap>
 void set_options_from_multimap(pressio_configurable& c, MultiMap const& user_options, const char* configurable_type) {
-  pressio_options c_options = c.get_options();
-  auto metric_opts = options_from_multimap(user_options);
-  for(auto const& [setting, value]: metric_opts) {
-    auto status = c_options.cast_set(setting, value, pressio_conversion_special);
+  pressio_options configurable_options = c.get_options();
+  pressio_options new_options;
+  auto presssio_user_opts = options_from_multimap(user_options);
+  for (auto const& [setting, value] : presssio_user_opts) {
+    new_options.set(setting, configurable_options.get(setting));
+    auto status = new_options.cast_set(setting, value, pressio_conversion_special);
     switch(status) {
       case pressio_options_key_does_not_exist:
         {
@@ -80,7 +82,7 @@ void set_options_from_multimap(pressio_configurable& c, MultiMap const& user_opt
         (void)0;
     }
   }
-  c.set_options(c_options);
+  c.set_options(new_options);
 }
 
 template <class PressioObject, class MultiMap>
