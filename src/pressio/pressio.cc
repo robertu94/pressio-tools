@@ -196,7 +196,8 @@ std::vector<pressio_data> decompress(struct pressio_compressor& compressor, std:
 int
 main(int argc, char* argv[])
 {
-  MPI_Init(&argc, &argv);
+  int requested=MPI_THREAD_MULTIPLE, provided;
+  MPI_Init_thread(&argc, &argv, requested, &provided);
   {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     auto opts = parse_args(argc, argv);
