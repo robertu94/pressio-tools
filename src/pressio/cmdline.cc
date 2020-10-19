@@ -362,6 +362,7 @@ parse_args(int argc, char* argv[])
         exit(EXIT_FAILURE);
       } else {
         opts.input.emplace_back(std::move(*read_data));
+        delete read_data;
       }
     }
   }
