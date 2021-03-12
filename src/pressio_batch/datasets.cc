@@ -45,7 +45,10 @@ struct generic_dataset_t: public dataset {
     pressio_data* desc = (dims.empty())
                            ? nullptr
                            : pressio_data_new_empty(type, dims.size(), dims.data());
-    return pressio_io_read(&io, desc);
+    
+    auto ret =  pressio_io_read(&io, desc);
+    pressio_data_free(desc);
+    return ret;
   }
 };
 

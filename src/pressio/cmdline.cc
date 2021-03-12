@@ -352,7 +352,7 @@ parse_args(int argc, char* argv[])
 
   for (auto const& input_buffer : input_builder) {
     opts.input_file_action.emplace_back(input_buffer.make_io());
-    pressio_data* read_data = opts.input_file_action.back()->read(input_buffer.make_input_desc().release());
+    pressio_data* read_data = opts.input_file_action.back()->read(input_buffer.make_input_desc().get());
     if(contains_one_of(opts.actions, Action::Compress, Action::Decompress)) {
       if(read_data == nullptr) {
         if(cmdline_rank == 0) {
