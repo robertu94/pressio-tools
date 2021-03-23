@@ -6,11 +6,16 @@
 #include <optional>
 #include <memory>
 #include <functional>
+#include <libpressio/pressio_version.h>
 #include <pressio_data.h>
 #include <libpressio_ext/io/pressio_io.h>
 #include <libpressio_ext/cpp/data.h>
 #include <libpressio_ext/cpp/io.h>
 
+enum class OutputFormat {
+  Human,
+  JSON
+};
 enum class Action
 {
   Version,
@@ -51,6 +56,7 @@ struct cmdline_options
   std::vector<pressio_io> decompressed_file_action;
   std::optional<std::string> qualified_prefix;
   std::optional<size_t> num_compressed;
+  OutputFormat format = OutputFormat::Human;
 };
 
 cmdline_options parse_args(int argc, char* argv[]);

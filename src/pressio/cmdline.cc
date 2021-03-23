@@ -29,6 +29,7 @@ usage()
 operations:
 -a <action> the actions to preform: compress, decompress, version, settings, default=compress+decompress
 -Q enable fully-qualified mode, this will change the names of options for compressors
+-j enable JSON output mode
 
 input datasets:
 -d <dim> dimension of the dataset
@@ -232,7 +233,7 @@ parse_args(int argc, char* argv[])
   std::vector<io_builder> compressed_builder(1);
   std::vector<io_builder> decompressed_builder(1);
 
-  while ((opt = getopt(argc, argv, "a:b:d:t:i:I:u:U:T:f:w:s:y:z:F:W:S:Y:Z:m:M:n:N:o:pO:C:Q")) != -1) {
+  while ((opt = getopt(argc, argv, "a:b:d:t:i:jI:u:U:T:f:w:s:y:z:F:W:S:Y:Z:m:M:n:N:o:pO:C:Q")) != -1) {
     switch (opt) {
       case 'a':
         actions.emplace(parse_action(optarg));
@@ -251,6 +252,9 @@ parse_args(int argc, char* argv[])
         break;
       case 'F':
         decompressed_builder.back().set_format(optarg);
+        break;
+      case 'j':
+        opts.format = OutputFormat::JSON;
         break;
       case 'i':
         input_builder.back().set_format_if("posix");

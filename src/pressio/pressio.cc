@@ -5,15 +5,19 @@
 #include <utility>
 #include <algorithm>
 #include <mpi.h>
-#include <libpressio/libpressio.h>
-#include <libpressio/libpressio_ext/io/pressio_io.h>
-#include <libpressio/libpressio_ext/cpp/io.h>
-#include <libpressio/libpressio_ext/cpp/options.h>
-#include <libpressio/libpressio_ext/cpp/printers.h>
-#include <libpressio/libpressio_ext/cpp/compressor.h>
-#include <libpressio/libpressio_ext/cpp/metrics.h>
-#include <libpressio/libpressio_ext/cpp/pressio.h>
-#include <libpressio/libpressio_ext/cpp/serializable.h>
+#include <libpressio.h>
+#include <pressio_version.h>
+#include <libpressio_ext/io/pressio_io.h>
+#include <libpressio_ext/cpp/io.h>
+#include <libpressio_ext/cpp/options.h>
+#include <libpressio_ext/cpp/printers.h>
+#include <libpressio_ext/cpp/compressor.h>
+#include <libpressio_ext/cpp/metrics.h>
+#include <libpressio_ext/cpp/pressio.h>
+#include <libpressio_ext/cpp/serializable.h>
+#if LIBPRESSIO_HAS_JSON
+#include <libpressio_ext/json/pressio_options_json.h>
+#endif
 #include <libdistributed_comm.h>
 
 #include <utils/string_options.h>
@@ -35,23 +39,49 @@ void print_versions(pressio& library) {
 }
 
 template <class ForwardIt>
-void print_selected_options(pressio_options const& options, ForwardIt begin, ForwardIt end) {
+void print_selected_options(pressio_options const& options, ForwardIt begin, ForwardIt end, OutputFormat format = OutputFormat::Human) {
   if(rank == 0) {
-  std::for_each(
-      begin,
-      end,
-      [options](std::string const option){
-        if (option == "all") {
-          std::cerr << (options);
-        } else { 
-          try {
-            std::cerr << option << options.get(option) << std::endl;
-          } catch(std::out_of_range const&) {
-            std::cerr << ": option is unknown" << std::endl;
-            exit(EXIT_FAILURE);
+  switch(format) {
+    case OutputFormat::Human:
+      std::for_each(
+          begin,
+          end,
+          [options](std::string const option){
+            if (option == "all") {
+              std::cerr << (options);
+            } else { 
+              try {
+                std::cerr << option << options.get(option) << std::endl;
+              } catch(std::out_of_range const&) {
+                std::cerr << ": option is unknown" << std::endl;
+                exit(EXIT_FAILURE);
+              }
+            }
+          });
+        break;
+      case OutputFormat::JSON:
+#if LIBPRESSIO_HAS_JSON
+        pressio_options for_json;
+        if(begin != end) {
+          if(std::find(begin, end, std::string("all")) != end) {
+            for_json = options;
+          } else {
+            for(auto current = begin; current != end; ++current) {
+              auto key = *current;
+              pressio_option const& value = options.get(key);
+              for_json.set(key, value);
+            }
           }
+          char* json = pressio_options_to_json(nullptr, &for_json);
+          std::cout << json << std::endl;
+          free(json);
         }
-      });
+#else
+        std::cerr << "JSON support not included in libpressio" << std::endl;
+        exit(1);
+#endif
+        break;
+      }
   }
 }
 
@@ -216,18 +246,18 @@ main(int argc, char* argv[])
       std::vector<pressio_data> decompressed;
 
       if (contains(opts.actions, Action::Settings)) {
-        print_selected_options(options, std::begin(opts.print_options), std::end(opts.print_options));
-        print_selected_options(compressor->get_configuration(), std::begin(opts.print_compile_options), std::end(opts.print_compile_options));
-        print_selected_options(metrics->get_options(), std::begin(opts.print_metrics_options), std::end(opts.print_metrics_options));
+        print_selected_options(options, std::begin(opts.print_options), std::end(opts.print_options), opts.format);
+        print_selected_options(compressor->get_configuration(), std::begin(opts.print_compile_options), std::end(opts.print_compile_options), opts.format);
+        print_selected_options(metrics->get_options(), std::begin(opts.print_metrics_options), std::end(opts.print_metrics_options), opts.format);
 
         for (const auto& input_file_action : opts.input_file_action) {
-          print_selected_options(input_file_action->get_options(), std::begin(opts.print_io_input_options), std::end(opts.print_io_input_options));
+          print_selected_options(input_file_action->get_options(), std::begin(opts.print_io_input_options), std::end(opts.print_io_input_options), opts.format);
         }
         for (auto const& compressed_file_action : opts.compressed_file_action) {
-          print_selected_options(compressed_file_action->get_options(), std::begin(opts.print_io_comp_options), std::end(opts.print_io_comp_options));
+          print_selected_options(compressed_file_action->get_options(), std::begin(opts.print_io_comp_options), std::end(opts.print_io_comp_options), opts.format);
         }
         for (auto const& decompressed_file_action : opts.decompressed_file_action) {
-          print_selected_options(decompressed_file_action->get_options(), std::begin(opts.print_io_decomp_options), std::end(opts.print_io_decomp_options));
+          print_selected_options(decompressed_file_action->get_options(), std::begin(opts.print_io_decomp_options), std::end(opts.print_io_decomp_options), opts.format);
         }
       }
       
@@ -262,7 +292,7 @@ main(int argc, char* argv[])
         }
       }
 
-      print_selected_options(compressor->get_metrics_results(), std::begin(opts.print_metrics), std::end(opts.print_metrics));
+      print_selected_options(compressor->get_metrics_results(), std::begin(opts.print_metrics), std::end(opts.print_metrics), opts.format);
     }
   }
   MPI_Finalize();
