@@ -86,7 +86,7 @@ void print_selected_options(pressio_options const& options, ForwardIt begin, For
 }
 
 template <class MultiMap>
-void set_options_from_multimap(pressio_configurable& c, MultiMap const& user_options, const char* configurable_type) {
+int set_options_from_multimap(pressio_configurable& c, MultiMap const& user_options, const char* configurable_type) {
   pressio_options configurable_options = c.get_options();
   pressio_options new_options;
   auto presssio_user_opts = options_from_multimap(user_options);
@@ -112,7 +112,7 @@ void set_options_from_multimap(pressio_configurable& c, MultiMap const& user_opt
         (void)0;
     }
   }
-  c.set_options(new_options);
+  return c.set_options(new_options);
 }
 
 template <class PressioObject, class MultiMap>
@@ -163,7 +163,13 @@ pressio_compressor setup_compressor(pressio& library, cmdline_options const& opt
 
 
   set_early_options(*compressor, opts.early_options);
-  set_options_from_multimap(*compressor, opts.options, "compressor");
+  int rc = set_options_from_multimap(*compressor, opts.options, "compressor");
+  if(rc) {
+    if(rank == 0) {
+      std::cerr << compressor->error_msg() << std::endl;
+    }
+    exit(compressor->error_code());
+  }
 
   return compressor;
 }
