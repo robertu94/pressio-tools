@@ -27,7 +27,7 @@ usage()
   if(cmdline_rank == 0) {
     std::cerr << R"(pressio [args] [compressor]
 operations:
--a <action> the actions to preform: compress, decompress, version, settings, default=compress+decompress
+-a <action> the actions to preform: compress, decompress, version, settings, help default=compress+decompress
 -Q enable fully-qualified mode, this will change the names of options for compressors
 -j enable JSON output mode
 
@@ -135,7 +135,7 @@ parse_option (std::string const& option) {
 }
 
 Action parse_action(std::string const& action) {
-  std::vector<std::string> actions { "compress", "decompress", "versions", "settings" };
+  std::vector<std::string> actions { "compress", "decompress", "versions", "settings", "help" };
   auto id = fuzzy_match(action, std::begin(actions), std::end(actions));
   if(id) {
     switch(*id)
@@ -148,6 +148,8 @@ Action parse_action(std::string const& action) {
         return Action::Version;
       case 3:
         return Action::Settings;
+      case 4:
+        return Action::Help;
       default:
         (void)0;
     }
@@ -341,7 +343,7 @@ parse_args(int argc, char* argv[])
   if (actions.empty()) opts.actions = {Action::Compress, Action::Decompress, Action::Settings};
   else opts.actions = std::move(actions);
 
-  if(contains_one_of(opts.actions, Action::Compress, Action::Settings, Action::Decompress)) {
+  if(contains_one_of(opts.actions, Action::Compress, Action::Settings, Action::Decompress, Action::Help)) {
     if(optind >= argc) {
       if(cmdline_rank == 0) {
         std::cerr << "expected positional arguments" << std::endl;
@@ -361,7 +363,6 @@ parse_args(int argc, char* argv[])
       if(read_data == nullptr) {
         if(cmdline_rank == 0) {
           std::cerr << "failed to read input file " << pressio_io_error_msg(&opts.input_file_action.back()) << std::endl;
-          usage();
         }
         exit(EXIT_FAILURE);
       } else {

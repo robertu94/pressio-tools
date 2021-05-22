@@ -25,6 +25,67 @@
 
 static int rank = 0;
 
+void print_help(pressio_compressor & compressor) {
+    auto docs = compressor->get_documentation();
+    if(docs.key_status("pressio:description") == pressio_options_key_set) {
+      std::cout << docs.get("pressio:description").get_value<std::string>() << std::endl;
+      docs.erase("pressio:description");
+    }
+    auto configs = compressor->get_configuration();
+    auto options = compressor->get_options();
+
+    std::cout <<  std::endl;
+    std::cout << "Options" << std::endl;
+    std::set<std::string> skip_list;
+    for (auto const& i : options) {
+      std::string const& key = i.first;
+      pressio_option const& value = i.second;
+      pressio_option_type type = value.type();
+
+      std::cout << key << " <" << type << "> ";
+      if(docs.key_status(key) == pressio_options_key_set) {
+        std::cout << docs.get(key).get_value<std::string>();
+      }
+      if(configs.key_status(key) == pressio_options_key_set) {
+        std::cout << " {" << configs.get(key) << "}";
+        skip_list.emplace(key);
+      }
+      std::cout << std::endl;
+    }
+
+    bool any_configs = false;
+
+    for (auto const& i : configs) {
+      std::string const& key = i.first;
+      pressio_option const& value = i.second;
+      if(skip_list.find(key) != skip_list.end())  {
+        continue;
+      }
+      if(! any_configs ) {
+        any_configs = true;
+        std::cout << std::endl << "Configuration" << std::endl;
+      }
+      pressio_option_type type = value.type();
+
+      std::cout << key << " <" << type << "> ";
+      if(docs.key_status(key) == pressio_options_key_set) {
+        std::cout << docs.get(key).get_value<std::string>();
+      }
+      std::cout << std::endl;
+    }
+
+    bool any_others = false;
+    for (auto const& i : skip_list) {
+      if(!any_others) {
+        std::cout << std::endl <<  "Other Configuration" << std::endl;
+        any_others = true;
+      }
+      std::cout << i << std::endl;
+    }
+
+
+}
+
 void print_versions(pressio& library) {
   if(rank == 0) {
     std::cerr << "libpressio version: " << pressio_version() << std::endl;
@@ -85,8 +146,7 @@ void print_selected_options(pressio_options const& options, ForwardIt begin, For
   }
 }
 
-template <class MultiMap>
-int set_options_from_multimap(pressio_configurable& c, MultiMap const& user_options, const char* configurable_type) {
+int set_options_from_multimap(pressio_configurable& c, std::multimap<std::string,std::string> const& user_options, const char* configurable_type) {
   pressio_options configurable_options = c.get_options();
   pressio_options new_options;
   auto presssio_user_opts = options_from_multimap(user_options);
@@ -115,8 +175,8 @@ int set_options_from_multimap(pressio_configurable& c, MultiMap const& user_opti
   return c.set_options(new_options);
 }
 
-template <class PressioObject, class MultiMap>
-void set_early_options(PressioObject& c, MultiMap const& user_options) {
+template <class PressioObject>
+void set_early_options(PressioObject& c, std::multimap<std::string,std::string> const& user_options) {
   pressio_options early_compressor_options = options_from_multimap(user_options);
   if (c.check_options(early_compressor_options)) {
     if(rank == 0) {
@@ -243,13 +303,17 @@ main(int argc, char* argv[])
       print_versions(library);
     }
 
-    if (contains_one_of(opts.actions, Action::Compress, Action::Decompress, Action::Settings)) {
+    if (contains_one_of(opts.actions, Action::Compress, Action::Decompress, Action::Settings, Action::Help)) {
 
       auto compressor = setup_compressor(library, opts);
       auto options = compressor->get_options();
       auto metrics = compressor->get_metrics();
       std::vector<pressio_data> compressed;
       std::vector<pressio_data> decompressed;
+
+      if (contains(opts.actions, Action::Help)) {
+        print_help(compressor);
+      }
 
       if (contains(opts.actions, Action::Settings)) {
         print_selected_options(options, std::begin(opts.print_options), std::end(opts.print_options), opts.format);

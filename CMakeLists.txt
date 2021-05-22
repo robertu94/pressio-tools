@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.13)
-project("pressio_tools" VERSION 0.0.11)
+project("pressio_tools" VERSION 0.0.12)
 
 #correct was to set a default build type
 # https://blog.kitware.com/cmake-and-the-default-build-type/
@@ -43,4 +43,6 @@ endif()
 
 add_subdirectory(src/pressio)
 add_subdirectory(src/pressio_batch)
+if(BUILD_TESTING)
 add_subdirectory(test)
+endif()

@@ -21,7 +21,8 @@ enum class Action
   Version,
   Compress,
   Decompress,
-  Settings
+  Settings,
+  Help
 };
 
 template <class Set, class Item>
