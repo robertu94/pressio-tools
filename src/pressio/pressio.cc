@@ -33,6 +33,9 @@ void print_help(pressio_compressor & compressor) {
     }
     auto configs = compressor->get_configuration();
     auto options = compressor->get_options();
+    auto metrics = compressor->get_metrics();
+    auto metrics_results = metrics->get_metrics_results({});
+    auto metrics_docs = metrics->get_documentation();
 
     std::cout <<  std::endl;
     std::cout << "Options" << std::endl;
@@ -81,6 +84,22 @@ void print_help(pressio_compressor & compressor) {
         any_others = true;
       }
       std::cout << i << std::endl;
+    }
+
+    bool any_metrics = false;
+    for (auto const& i : metrics_results) {
+      if(!any_metrics) {
+        std::cout << std::endl <<  "Metrics Results" << std::endl;
+        any_metrics = true;
+      }
+      std::string const& key = i.first;
+      pressio_option const& value = i.second;
+      auto const& type = value.type();
+      std::cout << key << " <" << type << "> ";
+      if(metrics_docs.key_status(key) == pressio_options_key_set) {
+        std::cout << metrics_docs.get(key).get_value<std::string>();
+      }
+      std::cout << std::endl;
     }
 
 
