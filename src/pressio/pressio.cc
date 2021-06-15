@@ -4,7 +4,9 @@
 #include <sstream>
 #include <utility>
 #include <algorithm>
+#if LIBPRESSIO_HAS_MPI
 #include <mpi.h>
+#endif
 #include <libpressio.h>
 #include <pressio_version.h>
 #include <libpressio_ext/io/pressio_io.h>
@@ -312,9 +314,13 @@ int
 main(int argc, char* argv[])
 {
   int requested=MPI_THREAD_MULTIPLE, provided;
+  #if LIBPRESSIO_HAS_MPI
   MPI_Init_thread(&argc, &argv, requested, &provided);
+  #endif
   {
+    #if LIBPRESSIO_HAS_MPI
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    #endif
     auto opts = parse_args(argc, argv);
     pressio library;
 
@@ -384,6 +390,11 @@ main(int argc, char* argv[])
       print_selected_options(compressor->get_metrics_results(), std::begin(opts.print_metrics), std::end(opts.print_metrics), opts.format);
     }
   }
+  #if LIBPRESSIO_HAS_MPI
   MPI_Finalize();
+  #else
+        std::cerr << "MPI support not included in libpressio" << std::endl;
+        exit(1);
+  #endif
   return 0;
 }
