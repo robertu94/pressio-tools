@@ -1,26 +1,33 @@
-#include <iostream>
-#include <libpressio_ext/cpp/configurable.h>
-#include <string>
-#include <sstream>
-#include <utility>
 #include <algorithm>
-#include <mpi.h>
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <utility>
+
 #include <libpressio.h>
 #include <pressio_version.h>
-#include <libpressio_ext/io/pressio_io.h>
-#include <libpressio_ext/cpp/io.h>
-#include <libpressio_ext/cpp/options.h>
-#include <libpressio_ext/cpp/printers.h>
 #include <libpressio_ext/cpp/compressor.h>
+#include <libpressio_ext/cpp/configurable.h>
+#include <libpressio_ext/cpp/io.h>
 #include <libpressio_ext/cpp/metrics.h>
+#include <libpressio_ext/cpp/options.h>
 #include <libpressio_ext/cpp/pressio.h>
+#include <libpressio_ext/cpp/printers.h>
+#include <libpressio_ext/io/pressio_io.h>
+
+#include <utils/pressio_tools_version.h>
+#include <utils/string_options.h>
+
+#if LIBPRESSIO_TOOLS_HAS_MPI
+#include <mpi.h>
+#include <libdistributed_comm.h>
 #include <libpressio_ext/cpp/serializable.h>
+#endif
+
 #if LIBPRESSIO_HAS_JSON
 #include <libpressio_ext/json/pressio_options_json.h>
 #endif
-#include <libdistributed_comm.h>
 
-#include <utils/string_options.h>
 #include "cmdline.h"
 
 static int rank = 0;
@@ -311,10 +318,16 @@ std::vector<pressio_data> decompress(struct pressio_compressor& compressor, std:
 int
 main(int argc, char* argv[])
 {
+  #if LIBPRESSIO_TOOLS_HAS_MPI
   int requested=MPI_THREAD_MULTIPLE, provided;
   MPI_Init_thread(&argc, &argv, requested, &provided);
+  #endif
   {
+    #if LIBPRESSIO_TOOLS_HAS_MPI
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    #else
+    rank = 0;
+    #endif
     auto opts = parse_args(argc, argv);
     pressio library;
 
@@ -369,7 +382,9 @@ main(int argc, char* argv[])
       }
 
       if (contains(opts.actions, Action::Decompress)) {
+#if LIBPRESSIO_TOOLS_HAS_MPI
         distributed::comm::bcast(compressed, 0, MPI_COMM_WORLD);
+#endif
         decompressed = decompress(compressor, compressed, opts);
       }
       for (size_t i = 0; i < decompressed.size(); ++i) {
@@ -384,6 +399,8 @@ main(int argc, char* argv[])
       print_selected_options(compressor->get_metrics_results(), std::begin(opts.print_metrics), std::end(opts.print_metrics), opts.format);
     }
   }
+  #if LIBPRESSIO_TOOLS_HAS_MPI
   MPI_Finalize();
+  #endif
   return 0;
 }
