@@ -4,11 +4,11 @@
 #include <sstream>
 #include <utility>
 #include <algorithm>
+#include <libpressio.h>
+#include <pressio_version.h>
 #if LIBPRESSIO_HAS_MPI
 #include <mpi.h>
 #endif
-#include <libpressio.h>
-#include <pressio_version.h>
 #include <libpressio_ext/io/pressio_io.h>
 #include <libpressio_ext/cpp/io.h>
 #include <libpressio_ext/cpp/options.h>
