@@ -313,13 +313,15 @@ std::vector<pressio_data> decompress(struct pressio_compressor& compressor, std:
 int
 main(int argc, char* argv[])
 {
-  int requested=MPI_THREAD_MULTIPLE, provided;
   #if LIBPRESSIO_HAS_MPI
+  int requested=MPI_THREAD_MULTIPLE, provided;
   MPI_Init_thread(&argc, &argv, requested, &provided);
   #endif
   {
     #if LIBPRESSIO_HAS_MPI
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    #else
+    rank = 0;
     #endif
     auto opts = parse_args(argc, argv);
     pressio library;
@@ -375,7 +377,9 @@ main(int argc, char* argv[])
       }
 
       if (contains(opts.actions, Action::Decompress)) {
+        #if LIBPRESSIO_HAS_MPI
         distributed::comm::bcast(compressed, 0, MPI_COMM_WORLD);
+        #endif
         decompressed = decompress(compressor, compressed, opts);
       }
       for (size_t i = 0; i < decompressed.size(); ++i) {
@@ -392,9 +396,6 @@ main(int argc, char* argv[])
   }
   #if LIBPRESSIO_HAS_MPI
   MPI_Finalize();
-  #else
-        std::cerr << "MPI support not included in libpressio" << std::endl;
-        exit(1);
   #endif
   return 0;
 }
