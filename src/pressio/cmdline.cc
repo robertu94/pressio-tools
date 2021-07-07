@@ -5,14 +5,17 @@
 #include <utility>
 #include <vector>
 #include <unistd.h>
-#include <mpi.h>
 
+#include <pressio_version.h>
 #include <libpressio.h>
 #include <libpressio_ext/cpp/options.h>
 #include <libpressio_ext/cpp/pressio.h>
 #include <libpressio_ext/cpp/printers.h>
 #include <libpressio_ext/io/pressio_io.h>
 
+#if LIBPRESSIO_HAS_MPI
+#include <mpi.h>
+#endif
 
 #include "utils/fuzzy_matcher.h"
 #include <utils/string_options.h>
@@ -225,8 +228,9 @@ class io_builder {
 cmdline_options
 parse_args(int argc, char* argv[])
 {
+  #if LIBPRESSIO_HAS_MPI
   MPI_Comm_rank(MPI_COMM_WORLD, &cmdline_rank);
-
+  #endif
   int opt;
   cmdline_options opts;
   std::set<Action> actions;
