@@ -190,7 +190,10 @@ int set_options_from_multimap(pressio_configurable& c, std::multimap<std::string
       case pressio_options_key_exists:
         {
           if(rank == 0) {
-            std::cerr << "cannot convert to correct type: " << value << " for setting " << setting  << std::endl;
+            auto type = new_options.get(setting).type();
+            std::cerr << "cannot convert to value " << value << " to correct type for setting " << setting  <<
+              " which has type " << type 
+              << std::endl;
           }
           exit(EXIT_FAILURE);
         }
