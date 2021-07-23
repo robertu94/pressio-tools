@@ -8,6 +8,8 @@ add_executable(pressio_batch
 )
 target_link_libraries(pressio_batch Boost::headers LibPressio::libpressio utils)
 
+option(LIBPRESSIO_TOOLS_HAS_MPI "require and link to the MPI module" OFF)
+if(LIBPRESSIO_TOOLS_HAS_MPI)
 add_executable(pressio_batch_mpi
   pressio_batch_mpi.cc 
   datasets.cc
@@ -16,8 +18,10 @@ add_executable(pressio_batch_mpi
   cmdline.cc
   metrics.cc
 )
+
 target_link_libraries(pressio_batch_mpi Boost::headers LibPressio::libpressio
   utils LibDistributed::libdistributed)
+endif()
 
 install(TARGETS pressio_batch
 	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}

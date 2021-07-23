@@ -228,9 +228,9 @@ class io_builder {
 cmdline_options
 parse_args(int argc, char* argv[])
 {
-  #if LIBPRESSIO_HAS_MPI
+#if LIBPRESSIO_HAS_MPI
   MPI_Comm_rank(MPI_COMM_WORLD, &cmdline_rank);
-  #endif
+#endif
   int opt;
   cmdline_options opts;
   std::set<Action> actions;

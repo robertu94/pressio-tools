@@ -35,8 +35,9 @@ double find_target(pressio_compressor* compressor, pressio_data* input, double t
 
 int main(int argc, char *argv[])
 {
-  #if LIBPRESSIO_HAS_MPI
-  int rank, size, thread_provided;
+  int rank=0;
+#if LIBPRESSIO_HAS_MPI
+  int size, thread_provided;
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &thread_provided);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   if(thread_provided != MPI_THREAD_MULTIPLE) {
@@ -45,7 +46,8 @@ int main(int argc, char *argv[])
     }
     MPI_Abort(MPI_COMM_WORLD, 3);
   }
-  #endif
+#endif
+
   pressio library;
   std::string metrics_ids[] = {"size", "time", "error_stat"};
   pressio_metrics metrics = library.get_metrics(std::begin(metrics_ids), std::end(metrics_ids));
@@ -80,11 +82,12 @@ int main(int argc, char *argv[])
   opt_options.set("dist_gridsearch:search", "fraz"); //binary search is non-monotonic for this input using SZ_REL
   opt_options.set("dist_gridsearch:num_bins", pressio_data{5ul,});
   opt_options.set("dist_gridsearch:overlap_percentage", pressio_data{.1,});
-  #if LIBPRESSIO_HAS_MPI
+#if LIBPRESSIO_HAS_MPI
   opt_options.set("dist_gridsearch:comm", (void*)MPI_COMM_WORLD);
-  #else
-  opt_opetions.set("dist_gridsearch:comm",NULL);
-  #endif
+#else
+  opt_options.set("dist_gridsearch:comm", NULL);
+#endif
+>>>>>>> Stashed changes
   opt_options.set("fraz:nthreads", 4u);
   opt_options.set("opt:compressor", "sz");
   opt_options.set("opt:inputs", std::vector<std::string>{"sz:rel_err_bound"});
@@ -105,8 +108,8 @@ int main(int argc, char *argv[])
   auto garbage = find_target(&compressor, input, lossless * .30);
 
 
-  #if LIBPRESSIO_HAS_MPI
+#if LIBPRESSIO_HAS_MPI
   MPI_Finalize();
-  #endif
+#endif
   return 0;
 }

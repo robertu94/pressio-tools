@@ -20,7 +20,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(Boost REQUIRED)
 find_package(LibPressio REQUIRED)
 find_package(std_compat REQUIRED)
-find_package(MPI REQUIRED COMPONENTS CXX)
 find_package(LibDistributed REQUIRED)
 
 add_library(utils 
@@ -43,9 +42,7 @@ endif()
 option(LIBPRESSIO_TOOLS_HAS_MPI "require and link to the MPI module" OFF)
 if(LIBPRESSIO_TOOLS_HAS_MPI)
 	find_package(MPI REQUIRED COMPONENTS CXX)
-	target_link_libraries(pressio-tools PRIVATE MPI::MPI_CXX utils)
 endif()
-
 add_subdirectory(src/pressio)
 add_subdirectory(src/pressio_batch)
 if(BUILD_TESTING)

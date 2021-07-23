@@ -377,9 +377,9 @@ main(int argc, char* argv[])
       }
 
       if (contains(opts.actions, Action::Decompress)) {
-        #if LIBPRESSIO_HAS_MPI
+#if LIBPRESSIO_HAS_MPI
         distributed::comm::bcast(compressed, 0, MPI_COMM_WORLD);
-        #endif
+#endif
         decompressed = decompress(compressor, compressed, opts);
       }
       for (size_t i = 0; i < decompressed.size(); ++i) {
