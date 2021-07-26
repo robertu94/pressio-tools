@@ -44,11 +44,11 @@ public:
     std::shared_ptr<TrieNode> current = root;
 
     for (auto character : to_match) {
-      if(!current->has_child(character)) return std::nullopt;
+      if(!current->has_child(character)) return compat::nullopt;
       current = current->get_child(character);
       if(current->get_id() != ambiguous) return current->get_id();
     }
-    return std::nullopt;
+    return compat::nullopt;
   }
 
 private:

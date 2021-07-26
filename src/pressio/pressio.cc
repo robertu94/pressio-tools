@@ -176,7 +176,9 @@ int set_options_from_multimap(pressio_configurable& c, std::multimap<std::string
   pressio_options configurable_options = c.get_options();
   pressio_options new_options;
   auto presssio_user_opts = options_from_multimap(user_options);
-  for (auto const& [setting, value] : presssio_user_opts) {
+  for (auto it =  presssio_user_opts.begin(); it != presssio_user_opts.end(); ++it) {
+    auto const& setting = it->first;
+    auto const& value = it->second;
     new_options.set(setting, configurable_options.get(setting));
     auto status = new_options.cast_set(setting, value, pressio_conversion_special);
     switch(status) {
@@ -338,7 +340,7 @@ main(int argc, char* argv[])
       print_versions(library);
     }
 
-    if (contains_one_of(opts.actions, Action::Compress, Action::Decompress, Action::Settings, Action::Help)) {
+    if (contains_one_of(opts.actions, {Action::Compress, Action::Decompress, Action::Settings, Action::Help})) {
 
       auto compressor = setup_compressor(library, opts);
       auto options = compressor->get_options();

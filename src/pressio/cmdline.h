@@ -6,6 +6,7 @@
 #include <std_compat/optional.h>
 #include <memory>
 #include <functional>
+#include <algorithm>
 #include <libpressio/pressio_version.h>
 #include <pressio_data.h>
 #include <libpressio_ext/io/pressio_io.h>
@@ -30,9 +31,12 @@ bool contains(Set const& set, Item const& item) {
   return set.find(item) != set.end();
 }
 
-template <class Set, class... Items>
-bool contains_one_of(Set const& set, Items const&... items) {
-  return (contains(set, items) || ...);
+template <class Set>
+bool contains_one_of(Set const& set, std::initializer_list<Action> items) {
+  return std::any_of(std::begin(items), std::end(items), [&set](Action a) {
+      return contains(set, a);
+      });
+  
 }
 
 

@@ -16,8 +16,8 @@ namespace {
     return out << "nullopt";
   }
   std::vector<TestCases> test_cases{
-    {"f", std::nullopt},
-    {"foo", std::nullopt},
+    {"f", compat::nullopt},
+    {"foo", compat::nullopt},
     {"fooz", 0},
     {"foobar", 2},
     {"b", 1},

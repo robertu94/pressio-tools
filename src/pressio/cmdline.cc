@@ -127,7 +127,8 @@ parse_type(std::string const& optarg_s)
 std::pair<std::string, std::string>
 parse_option (std::string const& option) {
   std::pair<std::string, std::string> result;
-  if (auto sep = option.find("="); sep != std::string::npos) {
+  auto sep = option.find("=");
+  if (sep != std::string::npos) {
     result.first = option.substr(0, sep);
     result.second = option.substr(sep + 1);
   } else {
@@ -349,7 +350,7 @@ parse_args(int argc, char* argv[])
   if (actions.empty()) opts.actions = {Action::Compress, Action::Decompress, Action::Settings};
   else opts.actions = std::move(actions);
 
-  if(contains_one_of(opts.actions, Action::Compress, Action::Settings, Action::Decompress, Action::Help)) {
+  if(contains_one_of(opts.actions, {Action::Compress, Action::Settings, Action::Decompress, Action::Help})) {
     if(optind >= argc) {
       if(cmdline_rank == 0) {
         std::cerr << "expected positional arguments" << std::endl;
@@ -365,7 +366,7 @@ parse_args(int argc, char* argv[])
   for (auto const& input_buffer : input_builder) {
     opts.input_file_action.emplace_back(input_buffer.make_io());
     pressio_data* read_data = opts.input_file_action.back()->read(input_buffer.make_input_desc().get());
-    if(contains_one_of(opts.actions, Action::Compress, Action::Decompress)) {
+    if(contains_one_of(opts.actions, {Action::Compress, Action::Decompress})) {
       if(read_data == nullptr) {
         if(cmdline_rank == 0) {
           std::cerr << "failed to read input file " << pressio_io_error_msg(&opts.input_file_action.back()) << std::endl;
