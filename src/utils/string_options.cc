@@ -7,7 +7,7 @@
 pressio_options options_from_multimap(std::multimap<std::string,std::string> const& map) {
   pressio_options opt;
   std::vector<std::string> values;
-  std::optional<std::string> key;
+  compat::optional<std::string> key;
   for (auto const& entry : map) {
     if(key && key != entry.first) {
       //we have a new key, create the entry for it

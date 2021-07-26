@@ -1,7 +1,7 @@
 #include "cmdline.h"
 #include <iostream>
 #include <memory>
-#include <optional>
+#include <std_compat/optional.h>
 #include <utility>
 #include <vector>
 #include <unistd.h>
@@ -219,9 +219,9 @@ class io_builder {
   };
 
   private:
-  std::optional<pressio_dtype> type;
+  compat::optional<pressio_dtype> type;
   std::vector<size_t> dims;
-  std::optional<std::string> io_format;
+  compat::optional<std::string> io_format;
   std::multimap<std::string, std::string> io_options;
 };
 

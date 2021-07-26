@@ -1,16 +1,17 @@
 #include "gtest/gtest.h"
+#include "std_compat/optional.h"
 
 #include "utils/fuzzy_matcher.h"
 
 namespace {
   struct TestCases {
     std::string test;
-    std::optional<size_t> expected;
+    compat::optional<size_t> expected;
   };
   std::ostream& operator<<(std::ostream& out, TestCases const& test_case) {
     return out << test_case.test;
   }
-  std::ostream& operator<<(std::ostream& out, std::optional<size_t> const& expected) {
+  std::ostream& operator<<(std::ostream& out, compat::optional<size_t> const& expected) {
     if (expected) { return out << *expected; }
     return out << "nullopt";
   }

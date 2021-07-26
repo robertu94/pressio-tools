@@ -3,7 +3,7 @@
 #include <set>
 #include <map>
 #include <vector>
-#include <optional>
+#include <std_compat/optional.h>
 #include <memory>
 #include <functional>
 #include <libpressio/pressio_version.h>
@@ -55,8 +55,8 @@ struct cmdline_options
   std::vector<pressio_io> input_file_action;
   std::vector<pressio_io> compressed_file_action;
   std::vector<pressio_io> decompressed_file_action;
-  std::optional<std::string> qualified_prefix;
-  std::optional<size_t> num_compressed;
+  compat::optional<std::string> qualified_prefix;
+  compat::optional<size_t> num_compressed;
   OutputFormat format = OutputFormat::Human;
 };
 

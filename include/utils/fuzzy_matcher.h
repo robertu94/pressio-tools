@@ -3,7 +3,7 @@
 #include <map>
 #include <memory>
 #include <string>
-#include <optional>
+#include <std_compat/optional.h>
 
 class Trie
 {
@@ -40,7 +40,7 @@ public:
     max_id++;
   }
 
-  std::optional<size_t> find(std::string const& to_match) { 
+  compat::optional<size_t> find(std::string const& to_match) { 
     std::shared_ptr<TrieNode> current = root;
 
     for (auto character : to_match) {
@@ -104,7 +104,7 @@ private:
  * specified by the input iterator range
  */
 template <class ForwardIterator>
-std::optional<size_t>
+compat::optional<size_t>
 fuzzy_match(std::string const& text, ForwardIterator begin_it, ForwardIterator end_it)
 {
   Trie candidates(begin_it, end_it);
