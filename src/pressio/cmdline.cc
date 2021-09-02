@@ -5,6 +5,7 @@
 #include <utility>
 #include <vector>
 #include <unistd.h>
+#include <dlfcn.h>
 
 #include <pressio_version.h>
 #include <libpressio.h>
@@ -242,7 +243,7 @@ parse_args(int argc, char* argv[])
   std::vector<io_builder> compressed_builder(1);
   std::vector<io_builder> decompressed_builder(1);
 
-  while ((opt = getopt(argc, argv, "a:b:d:t:i:jI:u:U:T:f:w:s:y:z:F:W:S:Y:Z:m:M:n:N:o:pO:C:Q")) != -1) {
+  while ((opt = getopt(argc, argv, "a:b:d:D:t:i:jI:u:U:T:f:w:s:y:z:F:W:S:Y:Z:m:M:n:N:o:pO:C:Q")) != -1) {
     switch (opt) {
       case 'a':
         actions.emplace(parse_action(optarg));
@@ -255,6 +256,13 @@ parse_args(int argc, char* argv[])
         break;
       case 'd':
         input_builder.back().push_dim(std::stoull(optarg));
+        break;
+      case 'D':
+        opts.extra_dl_handles.push_back(dlopen(optarg, RTLD_NOW));
+        if(opts.extra_dl_handles.back() == nullptr) {
+          std::cerr << "failed loading: " << optarg << ": " << dlerror() << std::endl;
+          exit(1);
+        }
         break;
       case 'f':
         compressed_builder.back().set_format(optarg);

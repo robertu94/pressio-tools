@@ -62,6 +62,7 @@ struct cmdline_options
   compat::optional<std::string> qualified_prefix;
   compat::optional<size_t> num_compressed;
   OutputFormat format = OutputFormat::Human;
+  std::vector<void*> extra_dl_handles;
 };
 
 cmdline_options parse_args(int argc, char* argv[]);
