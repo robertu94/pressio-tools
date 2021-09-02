@@ -258,7 +258,7 @@ parse_args(int argc, char* argv[])
         input_builder.back().push_dim(std::stoull(optarg));
         break;
       case 'D':
-        opts.extra_dl_handles.push_back(dlopen(optarg, RTLD_NOW));
+        opts.extra_dl_handles.push_back(dlopen(optarg, RTLD_LAZY | RTLD_GLOBAL));
         if(opts.extra_dl_handles.back() == nullptr) {
           std::cerr << "failed loading: " << optarg << ": " << dlerror() << std::endl;
           exit(1);
