@@ -179,7 +179,15 @@ int set_options_from_multimap(pressio_configurable& c, std::multimap<std::string
   for (auto it =  presssio_user_opts.begin(); it != presssio_user_opts.end(); ++it) {
     auto const& setting = it->first;
     auto const& value = it->second;
-    new_options.set(setting, configurable_options.get(setting));
+    auto option_status = configurable_options.key_status(setting);
+    if(option_status == pressio_options_key_does_not_exist) {
+          if(rank == 0) {
+            std::cerr << "non existent option for the " << configurable_type << " : " << setting  << std::endl;
+          }
+          exit(EXIT_FAILURE);
+    }
+    auto option = configurable_options.get(setting);
+    new_options.set(setting, std::move(option));
     auto status = new_options.cast_set(setting, value, pressio_conversion_special);
     switch(status) {
       case pressio_options_key_does_not_exist:
