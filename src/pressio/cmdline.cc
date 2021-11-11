@@ -215,7 +215,7 @@ class io_builder {
     return io;
   }
   std::unique_ptr<pressio_data> make_input_desc() const {
-    return (type && !dims.empty())
+    return (type)
       ? std::make_unique<pressio_data>(pressio_data::owning(*type, dims.size(), dims.data()))
       : std::unique_ptr<pressio_data>(nullptr);
   };
