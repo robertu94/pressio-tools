@@ -137,6 +137,10 @@ parse_option (std::string const& option) {
     err_msg += option;
     throw std::runtime_error(std::move(err_msg));
   }
+
+  if(result.first.find(":") == std::string::npos) {
+    result.first = "pressio:" + result.first;
+  }
   
   return result;
 }
@@ -237,11 +241,21 @@ parse_args(int argc, char* argv[])
 #endif
   int opt;
   cmdline_options opts;
+#if (PRESSIO_MAJOR_VERSION > 1) || (PRESSIO_MAJOR_VERSION == 0  && PRESSIO_MINOR_VERSION > 75)
+  opts.compressor = "pressio";
+#else
+  opts.compressor = "noop";
+#endif
   std::set<Action> actions;
 
   std::vector<io_builder> input_builder(1);
   std::vector<io_builder> compressed_builder(1);
   std::vector<io_builder> decompressed_builder(1);
+
+  if(argc == 1) {
+    usage();
+    exit(0);
+  }
 
   while ((opt = getopt(argc, argv, "a:b:d:D:t:i:jI:u:U:T:f:w:s:y:z:F:W:S:Y:Z:m:M:n:N:o:pO:C:Q")) != -1) {
     switch (opt) {
@@ -359,13 +373,7 @@ parse_args(int argc, char* argv[])
   else opts.actions = std::move(actions);
 
   if(contains_one_of(opts.actions, {Action::Compress, Action::Settings, Action::Decompress, Action::Help})) {
-    if(optind >= argc) {
-      if(cmdline_rank == 0) {
-        std::cerr << "expected positional arguments" << std::endl;
-        usage();
-      }
-      exit(EXIT_FAILURE);
-    } else {
+    if(optind < argc) {
       opts.compressor = argv[optind++];
     }
   }
