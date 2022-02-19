@@ -83,6 +83,7 @@ compressors: )";
     std::cerr << pressio_supported_compressors() << std::endl;
     std::cerr << "io: " << pressio_supported_io_modules() << std::endl;
     std::cerr << "metrics: " << pressio_supported_metrics() << std::endl;
+    pressio_release(pressio);
   }
 }
 
