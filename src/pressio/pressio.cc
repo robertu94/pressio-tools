@@ -14,6 +14,7 @@
 #include <libpressio_ext/cpp/pressio.h>
 #include <libpressio_ext/cpp/printers.h>
 #include <libpressio_ext/io/pressio_io.h>
+#include <libpressio_meta.h>
 
 #include <utils/pressio_tools_version.h>
 #include <utils/string_options.h>
@@ -331,6 +332,7 @@ std::vector<pressio_data> decompress(struct pressio_compressor& compressor, std:
 int
 main(int argc, char* argv[])
 {
+  libpressio_register_all();
   #if LIBPRESSIO_TOOLS_HAS_MPI
   int requested=MPI_THREAD_MULTIPLE, provided;
   MPI_Init_thread(&argc, &argv, requested, &provided);

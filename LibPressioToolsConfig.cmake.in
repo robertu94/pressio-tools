@@ -1,0 +1,31 @@
+@PACKAGE_INIT@
+
+include("${CMAKE_CURRENT_LIST_DIR}/LibPressioToolsTargets.cmake")
+
+find_package(LibPressio REQUIRED)
+find_package(std_compat REQUIRED)
+
+if(@LIBPRESSIO_TOOLS_HAS_NVCOMP@)
+  find_package(LibPressioNVComp REQUIRED)
+endif()
+if(@LIBPRESSIO_TOOLS_HAS_RMETRIC@)
+  find_package(LibPressioRMetric REQUIRED)
+endif()
+if(@LIBPRESSIO_TOOLS_HAS_TTHRESH@)
+  find_package(LibPressioTThresh REQUIRED)
+endif()
+if(@LIBPRESSIO_TOOLS_HAS_OPT@)
+  find_package(LibPressioOpt REQUIRED)
+endif()
+if(@LIBPRESSIO_TOOLS_HAS_ERROR_INJECTOR@)
+  find_package(LibPressioErrorInjector REQUIRED)
+endif()
+if(@LIBPRESSIO_TOOLS_HAS_MPI@)
+  find_package(LibDistributed REQUIRED)
+	find_package(MPI REQUIRED COMPONENTS CXX)
+endif()
+if(@LIBPRESSIO_TOOLS_HAS_ADIOS2@)
+  find_package(libpressio_adios2 REQUIRED)
+endif()
+
+check_required_components(LibPressioTools)

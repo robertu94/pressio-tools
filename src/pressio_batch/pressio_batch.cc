@@ -4,6 +4,7 @@
 #include <algorithm>
 
 #include <libpressio.h>
+#include <libpressio_meta.h>
 #include <libpressio_ext/cpp/options.h>
 
 #include "compressor_configs.h"
@@ -18,6 +19,7 @@ int
 main(int argc, char* argv[])
 {
   auto args = parse_args(argc, argv);
+  libpressio_register_all();
 
   auto library = pressio_instance();
 

@@ -2,6 +2,7 @@
 #include <mpi.h>
 
 #include <libpressio.h>
+#include <libpressio_meta.h>
 #include <libpressio_ext/cpp/options.h>
 #include <libpressio_ext/io/posix.h>
 #include <libdistributed_work_queue.h>
@@ -46,6 +47,7 @@ int main(int argc, char *argv[])
 {
   int rank;
   MPI_Init(&argc, &argv);
+  libpressio_register_all();
   try {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
