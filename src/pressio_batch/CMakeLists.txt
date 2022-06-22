@@ -6,7 +6,7 @@ add_executable(pressio_batch
   cmdline.cc
   metrics.cc
 )
-target_link_libraries(pressio_batch Boost::headers LibPressio::libpressio utils)
+target_link_libraries(pressio_batch PRIVATE Boost::headers libpressio_meta utils)
 install(TARGETS pressio_batch
 	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 	)
@@ -21,7 +21,7 @@ if(LIBPRESSIO_TOOLS_HAS_MPI)
     cmdline.cc
     metrics.cc
   )
-  target_link_libraries(pressio_batch_mpi Boost::headers LibPressio::libpressio
+target_link_libraries(pressio_batch_mpi Boost::headers libpressio_meta
     utils LibDistributed::libdistributed
   )
   install(TARGETS pressio_batch_mpi
