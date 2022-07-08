@@ -25,6 +25,9 @@
 #include <libpressio_adios2.h>
 #endif
 
+#if LIBPRESSIO_TOOLS_HAS_FRSZ
+#include <frsz.h>
+#endif
 
 /**
  * some linux distributions (i.e. Ubuntu) delay shared library loading
@@ -58,4 +61,7 @@ extern "C" void libpressio_register_all() {
   libpressio_register_adios2();
 #endif
 
+#if LIBPRESSIO_TOOLS_HAS_FRSZ
+  register_frsz();
+#endif
 };
