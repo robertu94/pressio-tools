@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.13)
-project("pressio_tools" VERSION 0.1.0)
+project("pressio_tools" VERSION 0.1.2)
 
 #correct was to set a default build type
 # https://blog.kitware.com/cmake-and-the-default-build-type/
@@ -58,6 +58,11 @@ option(LIBPRESSIO_TOOLS_HAS_RMETRIC "require and link to the libpressio R metric
 if(LIBPRESSIO_TOOLS_HAS_RMETRIC)
   find_package(LibPressioRMetric REQUIRED)
   target_link_libraries(libpressio_meta PUBLIC LibPressioRMetric::libpressio_r_metric)
+endif()
+option(LIBPRESSIO_TOOLS_HAS_SPERR "require and link to the libpressio sperr module" OFF)
+if(LIBPRESSIO_TOOLS_HAS_SPERR)
+  find_package(LibPressioSperr REQUIRED)
+  target_link_libraries(libpressio_meta PUBLIC LibPressioSperr::libpressio_sperr)
 endif()
 option(LIBPRESSIO_TOOLS_HAS_TTHRESH "require and link to the libpressio tthresh module" OFF)
 if(LIBPRESSIO_TOOLS_HAS_TTHRESH)
