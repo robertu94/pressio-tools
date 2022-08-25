@@ -1,0 +1,10 @@
+includedir=@CMAKE_INSTALL_PREFIX@/@CMAKE_INSTALL_INCLUDEDIR@
+libdir=@CMAKE_INSTALL_PREFIX@/@CMAKE_INSTALL_LIBDIR@
+
+Name: LibpressioMeta
+Description: 3rd party libpressio extension modules
+Version: @PROJECT_VERSION@
+Cflags: -I${includedir}
+Libs: -L${libdir} -llibpressio_meta
+Requires: libpressio_cxx
+

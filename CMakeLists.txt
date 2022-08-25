@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.13)
-project("pressio_tools" VERSION 0.1.3)
+project("pressio_tools" VERSION 0.1.4)
 
 #correct was to set a default build type
 # https://blog.kitware.com/cmake-and-the-default-build-type/
@@ -93,6 +93,16 @@ configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/pressio_tools_version.h.in
   ${CMAKE_CURRENT_BINARY_DIR}/src/utils/pressio_tools_version.h
   )
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/libpressio_meta.pc.in
+  ${CMAKE_CURRENT_BINARY_DIR}/libpressio_meta.pc
+  @ONLY
+  )
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/libpressio_meta_cxx.pc.in
+  ${CMAKE_CURRENT_BINARY_DIR}/libpressio_meta_cxx.pc
+  @ONLY
+  )
 
 add_subdirectory(src/pressio)
 add_subdirectory(src/pressio_batch)
@@ -106,6 +116,8 @@ install(TARGETS libpressio_meta libpressio_tools_utils EXPORT LibPressioToolsTar
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
   )
 install(EXPORT LibPressioToolsTargets NAMESPACE LibPressioTools:: DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/LibPressioTools/)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libpressio_meta.pc DESTINATION ${CMAKE_INSTALL_PREFIX}/share/pkgconfig)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libpressio_meta_cxx.pc DESTINATION ${CMAKE_INSTALL_PREFIX}/share/pkgconfig)
 install(FILES include/libpressio_meta.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 include(CMakePackageConfigHelpers)
 configure_package_config_file(${CMAKE_CURRENT_SOURCE_DIR}/LibPressioToolsConfig.cmake.in
