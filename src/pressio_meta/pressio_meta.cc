@@ -33,6 +33,10 @@
 #include <libpressio-sperr.h>
 #endif
 
+#if LIBPRESSIO_TOOLS_HAS_HLRCOMPRESS
+#include <libpressio-hlrcompress.h>
+#endif
+
 /**
  * some linux distributions (i.e. Ubuntu) delay shared library loading
  * until the library is referenced.  This library exists to reference all of the 
@@ -71,5 +75,9 @@ extern "C" void libpressio_register_all() {
 
 #if LIBPRESSIO_TOOLS_HAS_SPERR
   register_libpressio_sperr();
+#endif
+
+#if LIBPRESSIO_TOOLS_HAS_HLRCOMPRESS
+  register_libpressio_hlrcompress();
 #endif
 };
