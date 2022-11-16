@@ -17,6 +17,7 @@
 #include "utils/fuzzy_matcher.h"
 #include "utils/string_options.h"
 #include "utils/pressio_tools_version.h"
+#include "options.h"
 
 #if LIBPRESSIO_TOOLS_HAS_MPI
 #include <mpi.h>
@@ -208,15 +209,18 @@ class io_builder {
       std::cerr << "failed to get io module " << io_format_str << std::endl;
       exit(EXIT_FAILURE);
     }
-    auto options = io->get_options();
-    auto format_pressio_options = options_from_multimap(io_options);
-    for (auto const& key_value : format_pressio_options) {
-      if(options.cast_set(key_value.first, key_value.second, pressio_conversion_special) != pressio_options_key_set) {
-        std::cerr << "failed to set" << key_value.first << " to " << key_value.second << std::endl;
+    if(io_options.find("io:path") != io_options.end()) {
+      if(io_options.count("io:path") == 1) {
+        std::string io_path = io_options.find("io:path")->second;
+        io->set_options({
+            {"io:path", io_path}
+        });
+      } else {
+        std::cerr << "multiple io_paths not supported";
         exit(EXIT_FAILURE);
       }
     }
-    io->set_options(options);
+    set_options_from_multimap(*io, io_options, "io");
     return io;
   }
   std::unique_ptr<pressio_data> make_input_desc() const {
@@ -289,11 +293,19 @@ parse_args(int argc, char* argv[])
         opts.format = OutputFormat::JSON;
         break;
       case 'i':
+#if LIBPRESSIO_MAJOR_VERSION > 0 || (LIBPRESSIO_MAJOR_VERSION == 0 && LIBPRESSIO_MINOR_VERSION >= 89)
+        input_builder.back().set_format_if("by_extension");
+#else
         input_builder.back().set_format_if("posix");
+#endif
         input_builder.back().emplace_option("io:path", optarg);
         break;
       case 'I':
+#if LIBPRESSIO_MAJOR_VERSION > 0 || (LIBPRESSIO_MAJOR_VERSION == 0 && LIBPRESSIO_MINOR_VERSION >= 89)
+        input_builder.back().set_format_if("hdf5", [](std::string const& s) {return s == "by_extension";});
+#else
         input_builder.back().set_format_if("hdf5", [](std::string const& s) {return s == "posix";});
+#endif
         input_builder.back().emplace_option("hdf5:dataset", optarg);
         break;
       case 'k':
