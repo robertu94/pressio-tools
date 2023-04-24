@@ -23,7 +23,8 @@ enum class Action
   Compress,
   Decompress,
   Settings,
-  Help
+  Help,
+  Graph
 };
 
 template <class Set, class Item>
@@ -63,6 +64,7 @@ struct cmdline_options
   compat::optional<size_t> num_compressed;
   OutputFormat format = OutputFormat::Human;
   std::vector<void*> extra_dl_handles;
+  std::string graph_format = "graphviz";
 };
 
 cmdline_options parse_args(int argc, char* argv[]);

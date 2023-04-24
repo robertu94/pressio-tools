@@ -31,6 +31,7 @@
 #endif
 
 #include "cmdline.h"
+#include "graph.h"
 
 int rank = 0;
 
@@ -310,7 +311,7 @@ main(int argc, char* argv[])
       print_versions(library);
     }
 
-    if (contains_one_of(opts.actions, {Action::Compress, Action::Decompress, Action::Settings, Action::Help})) {
+    if (contains_one_of(opts.actions, {Action::Compress, Action::Decompress, Action::Settings, Action::Help, Action::Graph})) {
 
       auto compressor = setup_compressor(library, opts);
       auto options = compressor->get_options();
@@ -336,6 +337,10 @@ main(int argc, char* argv[])
         for (auto const& decompressed_file_action : opts.decompressed_file_action) {
           print_selected_options(decompressed_file_action->get_options(), std::begin(opts.print_io_decomp_options), std::end(opts.print_io_decomp_options), opts.format);
         }
+      }
+
+      if (contains(opts.actions, Action::Graph)) {
+          print_graph(compressor, opts.graph_format);
       }
       
       if (contains(opts.actions, Action::Compress)) {

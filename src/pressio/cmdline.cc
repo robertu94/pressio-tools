@@ -148,7 +148,7 @@ parse_option (std::string const& option) {
 }
 
 Action parse_action(std::string const& action) {
-  std::vector<std::string> actions { "compress", "decompress", "versions", "settings", "help" };
+  std::vector<std::string> actions { "compress", "decompress", "versions", "settings", "help", "graph" };
   auto id = fuzzy_match(action, std::begin(actions), std::end(actions));
   if(id) {
     switch(*id)
@@ -163,6 +163,8 @@ Action parse_action(std::string const& action) {
         return Action::Settings;
       case 4:
         return Action::Help;
+      case 5:
+        return Action::Graph;
       default:
         (void)0;
     }
@@ -262,7 +264,7 @@ parse_args(int argc, char* argv[])
     exit(0);
   }
 
-  while ((opt = getopt(argc, argv, "a:b:d:D:t:i:jI:u:U:T:f:w:s:y:z:F:W:S:Y:Z:m:M:n:N:o:pO:C:Q")) != -1) {
+  while ((opt = getopt(argc, argv, "a:b:d:D:g:t:i:jI:u:U:T:f:w:s:y:z:F:W:S:Y:Z:m:M:n:N:o:pO:C:Q")) != -1) {
     switch (opt) {
       case 'a':
         actions.emplace(parse_action(optarg));
@@ -288,6 +290,9 @@ parse_args(int argc, char* argv[])
         break;
       case 'F':
         decompressed_builder.back().set_format(optarg);
+        break;
+      case 'g':
+        opts.graph_format = optarg;
         break;
       case 'j':
         opts.format = OutputFormat::JSON;

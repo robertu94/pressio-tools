@@ -1,4 +1,4 @@
-add_executable(pressio pressio.cc cmdline.cc options.cc)
+add_executable(pressio pressio.cc cmdline.cc options.cc graph.cc)
 target_link_libraries(pressio PRIVATE libpressio_tools_utils libpressio_meta ${CMAKE_DL_LIBS})
 target_include_directories(pressio PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 

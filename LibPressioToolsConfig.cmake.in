@@ -33,5 +33,7 @@ endif()
 if(@LIBPRESSIO_TOOLS_HAS_FRSZ@)
   find_package(frsz REQUIRED)
 endif()
-
+if(@LIBPRESSIO_TOOLS_HAS_CUSZP@)
+  find_package(cuSZp REQUIRED)
+endif()
 check_required_components(LibPressioTools)

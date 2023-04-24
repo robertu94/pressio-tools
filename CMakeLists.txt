@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.13)
-project("pressio_tools" VERSION 0.2.0)
+project("pressio_tools" VERSION 0.3.0)
 
 #correct was to set a default build type
 # https://blog.kitware.com/cmake-and-the-default-build-type/
@@ -14,6 +14,28 @@ endif()
 
 include(CTest)
 include(GNUInstallDirs)
+
+if(NOT USE_SANITIZER)
+  set(USE_SANITIZER "" CACHE STRING "use a build sanitizer" FORCE)
+endif()
+set_property(CACHE USE_SANITIZER PROPERTY STRINGS "" "Address" "Thread" "Undefined" "Leak" "Memory")
+if (USE_SANITIZER STREQUAL "Address")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
+elseif (USE_SANITIZER STREQUAL "Thread")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=thread")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=thread")
+elseif (USE_SANITIZER STREQUAL "Undefined")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=undefined")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=undefined")
+elseif (USE_SANITIZER STREQUAL "Leak")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=leak")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=leak")
+elseif (USE_SANITIZER STREQUAL "Memory")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=memory")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=memory")
+endif()
+
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 option(BUILD_SHARED_LIBS "prefer shared libraries" ON)
@@ -83,6 +105,11 @@ option(LIBPRESSIO_TOOLS_HAS_ERROR_INJECTOR "require and link to the LibPressioEr
 if(LIBPRESSIO_TOOLS_HAS_ERROR_INJECTOR)
   find_package(LibPressioErrorInjector REQUIRED)
   target_link_libraries(libpressio_meta PUBLIC LibPressioErrorInjector::libpressio_error_injector)
+endif()
+option(LIBPRESSIO_TOOLS_HAS_CUSZP "require and link to the LibPressioCuSZp module" OFF)
+if(LIBPRESSIO_TOOLS_HAS_CUSZP)
+  find_package(cuSZp REQUIRED)
+  target_link_libraries(libpressio_meta PUBLIC cuSZp::libpressio_cuszp)
 endif()
 option(LIBPRESSIO_TOOLS_HAS_MPI "require and link to the MPI module" OFF)
 if(LIBPRESSIO_TOOLS_HAS_MPI)
