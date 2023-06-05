@@ -22,6 +22,8 @@ enum class Action
   Version,
   Compress,
   Decompress,
+  SaveConfig,
+  LoadConfig,
   Settings,
   Help,
   Graph
@@ -49,6 +51,7 @@ struct cmdline_options
   std::multimap<std::string, std::string> metrics_options;
   std::set<std::string> print_options;
   std::string compressor;
+  std::string config_file;
   std::vector<const char*> metrics_ids;
   std::set<const char*> print_metrics;
   std::set<const char*> print_compile_options;

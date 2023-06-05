@@ -3,6 +3,7 @@
 #include <sstream>
 #include <string>
 #include <utility>
+#include <fstream>
 
 #include <libpressio.h>
 #include <pressio_version.h>
@@ -206,6 +207,31 @@ pressio_compressor setup_compressor(pressio& library, cmdline_options const& opt
   if(opts.qualified_prefix) {
     compressor->set_name(*opts.qualified_prefix);
   }
+  if(contains(opts.actions, Action::LoadConfig)) {
+#if LIBPRESSIO_HAS_JSON
+      std::ostringstream oss;
+      std::ifstream in (opts.config_file);
+      if(!in) {
+          std::cerr << "failed to read file " << opts.config_file << std::endl;
+          exit(1);
+      }
+      oss << in.rdbuf();
+      std::string json_str(oss.str());
+      pressio_options* opts = pressio_options_new_json(&library, json_str.c_str());
+      if(!opts) {
+          std::cerr << library.err_msg() << std::endl;
+          exit(library.err_code());
+      }
+      if(compressor->set_options(*opts)) {
+          std::cerr << compressor->error_msg() << std::endl;
+          exit(compressor->error_code());
+      }
+      pressio_options_free(opts);
+#else
+      std::cerr << "libpressio built without JSON support" << std::endl;
+      exit(1);
+#endif
+  }
 
   pressio_metrics metrics = library.get_metrics(std::begin(opts.metrics_ids), std::end(opts.metrics_ids));
   if (!metrics) {
@@ -219,12 +245,23 @@ pressio_compressor setup_compressor(pressio& library, cmdline_options const& opt
     exit(library.err_code());
   }
 
-  set_options_from_multimap(*metrics, opts.metrics_options, "metrics");
+  compat::optional<pressio_options> null;
+  set_options_from_multimap(*metrics, opts.metrics_options, "metrics", null);
   compressor->set_metrics(metrics);
 
 
+  compat::optional<pressio_options> out;
   set_early_options(*compressor, opts.early_options);
-  int rc = set_options_from_multimap(*compressor, opts.options, "compressor");
+  if(contains(opts.actions, Action::SaveConfig)) {
+      out = options_from_multimap(opts.early_options);
+  }
+  int rc = set_options_from_multimap(*compressor, opts.options, "compressor", out);
+  if(contains(opts.actions, Action::SaveConfig)) {
+          std::ofstream of(opts.config_file);
+          char* str = pressio_options_to_json(&library, &*out);
+          of << str;
+          free(str);
+  }
   if(rc) {
     if(rank == 0) {
       std::cerr << compressor->error_msg() << std::endl;
@@ -311,7 +348,7 @@ main(int argc, char* argv[])
       print_versions(library);
     }
 
-    if (contains_one_of(opts.actions, {Action::Compress, Action::Decompress, Action::Settings, Action::Help, Action::Graph})) {
+    if (contains_one_of(opts.actions, {Action::Compress, Action::Decompress, Action::Settings, Action::Help, Action::Graph, Action::SaveConfig, Action::LoadConfig})) {
 
       auto compressor = setup_compressor(library, opts);
       auto options = compressor->get_options();

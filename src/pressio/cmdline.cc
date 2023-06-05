@@ -148,7 +148,7 @@ parse_option (std::string const& option) {
 }
 
 Action parse_action(std::string const& action) {
-  std::vector<std::string> actions { "compress", "decompress", "versions", "settings", "help", "graph" };
+  std::vector<std::string> actions { "compress", "decompress", "versions", "settings", "help", "graph", "save", "load"};
   auto id = fuzzy_match(action, std::begin(actions), std::end(actions));
   if(id) {
     switch(*id)
@@ -165,6 +165,10 @@ Action parse_action(std::string const& action) {
         return Action::Help;
       case 5:
         return Action::Graph;
+      case 6:
+        return Action::SaveConfig;
+      case 7:
+        return Action::LoadConfig;
       default:
         (void)0;
     }
@@ -222,7 +226,8 @@ class io_builder {
         exit(EXIT_FAILURE);
       }
     }
-    set_options_from_multimap(*io, io_options, "io");
+    compat::optional<pressio_options> null;
+    set_options_from_multimap(*io, io_options, "io", null);
     return io;
   }
   std::unique_ptr<pressio_data> make_input_desc() const {
@@ -264,7 +269,7 @@ parse_args(int argc, char* argv[])
     exit(0);
   }
 
-  while ((opt = getopt(argc, argv, "a:b:d:D:g:t:i:jI:u:U:T:f:w:s:y:z:F:W:S:Y:Z:m:M:n:N:o:pO:C:Q")) != -1) {
+  while ((opt = getopt(argc, argv, "a:b:d:D:g:t:i:jl:I:u:U:T:f:w:s:y:z:F:W:S:Y:Z:m:M:n:N:o:pO:C:Q")) != -1) {
     switch (opt) {
       case 'a':
         actions.emplace(parse_action(optarg));
@@ -296,6 +301,9 @@ parse_args(int argc, char* argv[])
         break;
       case 'j':
         opts.format = OutputFormat::JSON;
+        break;
+      case 'l':
+        opts.config_file = optarg;
         break;
       case 'i':
 #if LIBPRESSIO_MAJOR_VERSION > 0 || (LIBPRESSIO_MAJOR_VERSION == 0 && LIBPRESSIO_MINOR_VERSION >= 89)
@@ -390,7 +398,7 @@ parse_args(int argc, char* argv[])
   if (actions.empty()) opts.actions = {Action::Compress, Action::Decompress, Action::Settings};
   else opts.actions = std::move(actions);
 
-  if(contains_one_of(opts.actions, {Action::Compress, Action::Settings, Action::Decompress, Action::Help})) {
+  if(contains_one_of(opts.actions, {Action::Compress, Action::Settings, Action::Decompress, Action::Help, Action::SaveConfig, Action::LoadConfig})) {
     if(optind < argc) {
       opts.compressor = argv[optind++];
     }

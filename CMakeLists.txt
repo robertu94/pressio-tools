@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.13)
-project("pressio_tools" VERSION 0.3.0)
+project("pressio_tools" VERSION 0.4.0)
 
 #correct was to set a default build type
 # https://blog.kitware.com/cmake-and-the-default-build-type/
@@ -43,6 +43,10 @@ option(BUILD_SHARED_LIBS "prefer shared libraries" ON)
 find_package(Boost REQUIRED)
 find_package(LibPressio REQUIRED)
 find_package(std_compat REQUIRED)
+
+add_executable(pressio_new src/pressio_new/pressio_new.cc src/pressio_new/templates.cc src/pressio_new/templates.h)
+target_compile_features(pressio_new PRIVATE cxx_std_17)
+
 
 add_library(libpressio_tools_utils 
   src/utils/string_options.cc
@@ -143,7 +147,7 @@ if(BUILD_TESTING)
 add_subdirectory(test)
 endif()
 
-install(TARGETS libpressio_meta libpressio_tools_utils EXPORT LibPressioToolsTargets
+install(TARGETS pressio_new libpressio_meta libpressio_tools_utils EXPORT LibPressioToolsTargets
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
   )

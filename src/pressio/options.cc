@@ -1,11 +1,12 @@
 #include <iostream>
 #include <libpressio_ext/cpp/libpressio.h>
+#include <std_compat/optional.h>
 #include <utils/string_options.h>
 #include <utility>
 #include <map>
 #include "options.h"
 
-int set_options_from_multimap(pressio_configurable& c, std::multimap<std::string,std::string> const& user_options, const char* configurable_type) {
+int set_options_from_multimap(pressio_configurable& c, std::multimap<std::string,std::string> const& user_options, const char* configurable_type, compat::optional<pressio_options>& out) {
   pressio_options configurable_options = c.get_options();
   pressio_options new_options;
   auto presssio_user_opts = options_from_multimap(user_options);
@@ -43,6 +44,9 @@ int set_options_from_multimap(pressio_configurable& c, std::multimap<std::string
       default:
         (void)0;
     }
+  }
+  if(out) {
+      out->copy_from(new_options);
   }
   return c.set_options(new_options);
 }
