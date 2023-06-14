@@ -91,6 +91,9 @@ std::unique_ptr<graph_printer> make_printer(std::string const& s, std::ostream& 
     else return std::unique_ptr<graph_printer>();
 }
 
+bool starts_with(std::string const& base, std::string const& pattern) {
+    return base.find(pattern) == 0;
+}
 
 void print_graph(pressio_compressor const& comp, std::string printer_format) {
     if(comp->get_name() == "") {
@@ -140,7 +143,7 @@ void print_graph(pressio_compressor const& comp, std::string printer_format) {
             std::vector<std::string> labels {name , prefix[name] + '@' + version[name]};
             if(verbose_options) {
                 for (auto const& o : options) {
-                    if(o.first.starts_with("/" + name + ":")) {
+                    if(starts_with(o.first, "/" + name + ":")) {
                         std::stringstream ss;
                         ss << o.first.substr(o.first.find(':')+1);
                         auto option_str =  o.second.as(pressio_option_charptr_type, pressio_conversion_special);
