@@ -257,10 +257,15 @@ pressio_compressor setup_compressor(pressio& library, cmdline_options const& opt
   }
   int rc = set_options_from_multimap(*compressor, opts.options, "compressor", out);
   if(contains(opts.actions, Action::SaveConfig)) {
+#if LIBPRESSIO_HAS_JSON
           std::ofstream of(opts.config_file);
           char* str = pressio_options_to_json(&library, &*out);
           of << str;
           free(str);
+#else
+          std::cerr << "JSON support not included" << std::endl;
+          exit(1);
+#endif
   }
   if(rc) {
     if(rank == 0) {
