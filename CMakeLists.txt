@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.13)
-project("pressio_tools" VERSION 0.4.2)
+project("pressio_tools" VERSION 0.4.3)
 
 #correct was to set a default build type
 # https://blog.kitware.com/cmake-and-the-default-build-type/
@@ -119,6 +119,11 @@ option(LIBPRESSIO_TOOLS_HAS_MPI "require and link to the MPI module" OFF)
 if(LIBPRESSIO_TOOLS_HAS_MPI)
   find_package(LibDistributed REQUIRED)
 	find_package(MPI REQUIRED COMPONENTS CXX)
+endif()
+option(LIBPRESSIO_TOOLS_HAS_ADIOS1 "require and link to the adios2 module" OFF)
+if(LIBPRESSIO_TOOLS_HAS_ADIOS1)
+  find_package(libpressio_adios1 REQUIRED)
+  target_link_libraries(libpressio_meta PUBLIC libpressio_adios1::libpressio_adios1)
 endif()
 option(LIBPRESSIO_TOOLS_HAS_ADIOS2 "require and link to the adios2 module" OFF)
 if(LIBPRESSIO_TOOLS_HAS_ADIOS2)

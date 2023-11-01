@@ -11,7 +11,7 @@ std::map<std::string, std::string> const templates {
     {"io", io_template},
     {"search", search_template},
     {"searchmetric", searchmetric_template},
-    {"dataset", search_template},
+    {"dataset", dataset_template},
     {"client:cpp", cpp_client},
     {"client:c", c_client},
     {"client:python", python_client},

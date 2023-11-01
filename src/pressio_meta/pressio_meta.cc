@@ -25,6 +25,10 @@
 #include <libpressio_adios2.h>
 #endif
 
+#if LIBPRESSIO_TOOLS_HAS_ADIOS1
+#include <libpressio_adios1.h>
+#endif
+
 #if LIBPRESSIO_TOOLS_HAS_FRSZ
 #include <frsz.h>
 #endif
@@ -67,6 +71,10 @@ extern "C" void libpressio_register_all() {
 
 #if LIBPRESSIO_TOOLS_HAS_ADIOS2
   libpressio_register_adios2();
+#endif
+
+#if LIBPRESSIO_TOOLS_HAS_ADIOS1
+  libpressio_register_adios1();
 #endif
 
 #if LIBPRESSIO_TOOLS_HAS_FRSZ
