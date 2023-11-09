@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.13)
-project("pressio_tools" VERSION 0.4.3)
+project("pressio_tools" VERSION 0.4.4)
 
 #correct was to set a default build type
 # https://blog.kitware.com/cmake-and-the-default-build-type/
@@ -114,6 +114,12 @@ option(LIBPRESSIO_TOOLS_HAS_CUSZP "require and link to the LibPressioCuSZp modul
 if(LIBPRESSIO_TOOLS_HAS_CUSZP)
   find_package(cuSZp REQUIRED)
   target_link_libraries(libpressio_meta PUBLIC cuSZp::libpressio_cuszp)
+endif()
+
+option(LIBPRESSIO_TOOLS_HAS_LC "require and link to the LC Compressor Framework module" OFF)
+if(LIBPRESSIO_TOOLS_HAS_LC)
+  find_package(LC REQUIRED)
+  target_link_libraries(libpressio_meta PUBLIC LC::libpressio_lc)
 endif()
 option(LIBPRESSIO_TOOLS_HAS_MPI "require and link to the MPI module" OFF)
 if(LIBPRESSIO_TOOLS_HAS_MPI)

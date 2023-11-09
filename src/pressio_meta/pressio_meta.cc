@@ -37,6 +37,10 @@
 #include <libpressio-sperr.h>
 #endif
 
+#if LIBPRESSIO_TOOLS_HAS_LC
+#include <lc_libpressio.h>
+#endif
+
 #if LIBPRESSIO_TOOLS_HAS_HLRCOMPRESS
 #include <libpressio-hlrcompress.h>
 #endif
@@ -83,6 +87,10 @@ extern "C" void libpressio_register_all() {
 
 #if LIBPRESSIO_TOOLS_HAS_SPERR
   register_libpressio_sperr();
+#endif
+
+#if LIBPRESSIO_TOOLS_HAS_LC
+  libpressio_register_lc();
 #endif
 
 #if LIBPRESSIO_TOOLS_HAS_HLRCOMPRESS
