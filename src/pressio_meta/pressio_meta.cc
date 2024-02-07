@@ -45,6 +45,9 @@
 #include <libpressio-hlrcompress.h>
 #endif
 
+#if LIBPRESSIO_TOOLS_HAS_DCTZ
+#include <libpressio_dctz.h>
+#endif
 /**
  * some linux distributions (i.e. Ubuntu) delay shared library loading
  * until the library is referenced.  This library exists to reference all of the 
@@ -95,5 +98,9 @@ extern "C" void libpressio_register_all() {
 
 #if LIBPRESSIO_TOOLS_HAS_HLRCOMPRESS
   register_libpressio_hlrcompress();
+#endif
+
+#if LIBPRESSIO_TOOLS_HAS_DCTZ
+  dctz_libpressio_register_all();
 #endif
 };

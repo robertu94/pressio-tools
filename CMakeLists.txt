@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.13)
-project("pressio_tools" VERSION 0.4.4)
+project("pressio_tools" VERSION 0.4.5)
 
 #correct was to set a default build type
 # https://blog.kitware.com/cmake-and-the-default-build-type/
@@ -135,6 +135,11 @@ option(LIBPRESSIO_TOOLS_HAS_ADIOS2 "require and link to the adios2 module" OFF)
 if(LIBPRESSIO_TOOLS_HAS_ADIOS2)
   find_package(libpressio_adios2 REQUIRED)
   target_link_libraries(libpressio_meta PUBLIC libpressio_adios2::libpressio_adios2)
+endif()
+option(LIBPRESSIO_TOOLS_HAS_DCTZ "require and link to the dctz module" OFF)
+if(LIBPRESSIO_TOOLS_HAS_DCTZ)
+  find_package(DCTZ REQUIRED)
+  target_link_libraries(libpressio_meta PUBLIC DCTZ::libpressio_dctz)
 endif()
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/pressio_tools_version.h.in

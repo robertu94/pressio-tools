@@ -34,9 +34,12 @@ usage()
   if(cmdline_rank == 0) {
     std::cerr << R"(pressio [args] [compressor]
 operations:
--a <action> the actions to preform: compress, decompress, version, settings, help default=compress+decompress
+-a <action> the actions to preform: compress, decompress, version, settings, load, save, graph help default=compress+decompress
 -Q enable fully-qualified mode, this will change the names of options for compressors
 -j enable JSON output mode
+-D <plugin.so> open plugin
+-g <graph_mode> format to print the module graph {graphviz, d2}
+-l <config_file> the configuration file to load/save
 
 input datasets:
 -d <dim> dimension of the dataset
@@ -44,6 +47,7 @@ input datasets:
 -i <input_file> path to the input file
 -I <dataset> treat the file as HDF5 and read this dataset
 -u <option>=<value> pass the specified option to the generic IO plugin for the input (uncompressed) file
+-G <option>=<value> pass the specified option to the generic IO plugin for the input (uncompressed) file early
 -U <option_key> prints this option after setting it, defaults none, "all" prints all options for the input (uncompressed) file
 -T <format> set the input format
 
@@ -55,6 +59,7 @@ output datasets:
 -w <compressed_file> use POSIX if format is not set
 -s <compressed_file_dataset> use HDF output for the compressed file
 -y <option>=<value> pass the specified option to the generic IO plugin for the compressed file
+-e <option>=<value> pass the specified option to the generic IO plugin for the compressed file early
 -z <option_key> prints this option after setting it, defaults none, "all" prints all options for the compressed file
 -k <num> number of compressed data datasets to pass to compress, defaults to the number of "-p" flags passed + 1
 
@@ -62,6 +67,7 @@ output datasets:
 -W <decompressed_file> use POSIX if format is not set
 -S <decompressed_file_dataset> use HDF output for the decompressed file
 -Y <option>=<value> pass the specified option to the generic IO plugin for the decompressed file
+-E <option>=<value> pass the specified option to the generic IO plugin for the decompressed file early
 -Z <option_key> prints this option after setting it, defaults none, "all" prints all options for the decompressed file
 
 metrics:
@@ -207,6 +213,11 @@ class io_builder {
     io_options.emplace(std::forward<T>(setting)...);
   }
 
+  template <class... T>
+  void emplace_option_early(T&&... setting) {
+    early_io_options.emplace(std::forward<T>(setting)...);
+  }
+
   pressio_io make_io() const {
     auto library = pressio();
     auto io_format_str = io_format.value_or("noop");
@@ -227,6 +238,7 @@ class io_builder {
       }
     }
     compat::optional<pressio_options> null;
+    io->set_options(options_from_multimap(early_io_options));
     set_options_from_multimap(*io, io_options, "io", null);
     return io;
   }
@@ -241,6 +253,7 @@ class io_builder {
   std::vector<size_t> dims;
   compat::optional<std::string> io_format;
   std::multimap<std::string, std::string> io_options;
+  std::multimap<std::string, std::string> early_io_options;
 };
 
 }
@@ -269,7 +282,7 @@ parse_args(int argc, char* argv[])
     exit(0);
   }
 
-  while ((opt = getopt(argc, argv, "a:b:d:D:g:t:i:jl:I:u:U:T:f:w:s:y:z:F:W:S:Y:Z:m:M:n:N:o:pO:C:Q")) != -1) {
+  while ((opt = getopt(argc, argv, "a:b:d:D:e:E:g:G:t:i:jl:I:u:U:T:f:w:s:y:z:F:W:S:Y:Z:m:M:n:N:o:pO:C:Q")) != -1) {
     switch (opt) {
       case 'a':
         actions.emplace(parse_action(optarg));
@@ -289,6 +302,15 @@ parse_args(int argc, char* argv[])
           std::cerr << "failed loading: " << optarg << ": " << dlerror() << std::endl;
           exit(1);
         }
+        break;
+      case 'e':
+        compressed_builder.back().emplace_option_early(parse_option(optarg));
+        break;
+      case 'E':
+        decompressed_builder.back().emplace_option_early(parse_option(optarg));
+        break;
+      case 'G':
+        input_builder.back().emplace_option_early(parse_option(optarg));
         break;
       case 'f':
         compressed_builder.back().set_format(optarg);

@@ -21,6 +21,12 @@ public:
     struct pressio_options options;
     set(options, "pressio:thread_safe", pressio_thread_safety_multiple);
     set(options, "pressio:stability", "experimental");
+    std::vector<std::string> invalidations {}; 
+    std::vector<pressio_configurable const*> invalidation_children {}; 
+    set(options, "predictors:error_dependent", get_accumulate_configuration("predictors:error_dependent", invalidation_children, invalidations));
+    set(options, "predictors:error_agnostic", get_accumulate_configuration("predictors:error_agnostic", invalidation_children, invalidations));
+    set(options, "predictors:runtime", get_accumulate_configuration("predictors:runtime", invalidation_children, invalidations));
+    set(options, "pressio:highlevel", get_accumulate_configuration("pressio:highlevel", invalidation_children, std::vector<std::string>{}));
     return options;
   }
 
@@ -105,8 +111,10 @@ class $1_plugin : public libpressio_metrics_plugin {
   
   struct pressio_options get_configuration_impl() const override {
     pressio_options opts;
-    set(opts, "pressio:stability", "stable");
+    set(opts, "pressio:stability", "experimental");
     set(opts, "pressio:thread_safe", pressio_thread_safety_multiple);
+    set(opts, "predictors:requires_decompress", true);
+    set(opts, "predictors:invalidate", std::vector<std::string>{"predictors:error_dependent"});
     return opts;
   }
 
@@ -175,7 +183,7 @@ class $1_plugin : public libpressio_io_plugin {
   
   struct pressio_options get_configuration_impl() const override {
     pressio_options opts;
-    set(opts, "pressio:stability", "stable");
+    set(opts, "pressio:stability", "experimental");
     set(opts, "pressio:thread_safe", pressio_thread_safety_multiple);
     return opts;
   }
