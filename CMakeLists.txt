@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.13)
-project("pressio_tools" VERSION 0.4.5)
+project("pressio_tools" VERSION 0.4.6)
 
 #correct was to set a default build type
 # https://blog.kitware.com/cmake-and-the-default-build-type/
@@ -140,6 +140,21 @@ option(LIBPRESSIO_TOOLS_HAS_DCTZ "require and link to the dctz module" OFF)
 if(LIBPRESSIO_TOOLS_HAS_DCTZ)
   find_package(DCTZ REQUIRED)
   target_link_libraries(libpressio_meta PUBLIC DCTZ::libpressio_dctz)
+endif()
+option(LIBPRESSIO_TOOLS_HAS_JIT "require and link to the jit module" OFF)
+if(LIBPRESSIO_TOOLS_HAS_JIT)
+    find_package(libpressio_jit REQUIRED)
+    target_link_libraries(libpressio_meta PUBLIC libpressio_jit::libpressio_jit)
+endif()
+option(LIBPRESSIO_TOOLS_HAS_PREDICT "require and link to the predict module" OFF)
+if(LIBPRESSIO_TOOLS_HAS_PREDICT)
+    find_package(LibPressioPredict REQUIRED)
+    target_link_libraries(libpressio_meta PUBLIC LibPressioPredict::libpressio_predict)
+endif()
+option(LIBPRESSIO_TOOLS_HAS_DATASET "require and link to the predict module" OFF)
+if(LIBPRESSIO_TOOLS_HAS_DATASET)
+    find_package(LibPressioDataset REQUIRED)
+    target_link_libraries(libpressio_meta PUBLIC LibPressioDataset::libpressio_dataset)
 endif()
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/pressio_tools_version.h.in

@@ -48,6 +48,18 @@
 #if LIBPRESSIO_TOOLS_HAS_DCTZ
 #include <libpressio_dctz.h>
 #endif
+
+#if LIBPRESSIO_TOOLS_HAS_JIT
+#include <libpressio_jit.h>
+#endif
+
+#if LIBPRESSIO_TOOLS_HAS_DATASET
+#include <libpressio_dataset.h>
+#endif
+
+#if LIBPRESSIO_TOOLS_HAS_PREDICT
+#include <libpressio_predict.h>
+#endif
 /**
  * some linux distributions (i.e. Ubuntu) delay shared library loading
  * until the library is referenced.  This library exists to reference all of the 
@@ -102,5 +114,17 @@ extern "C" void libpressio_register_all() {
 
 #if LIBPRESSIO_TOOLS_HAS_DCTZ
   dctz_libpressio_register_all();
+#endif
+
+#if LIBPRESSIO_TOOLS_HAS_JIT
+  libpressio_jit_register_all();
+#endif
+
+#if LIBPRESSIO_TOOLS_HAS_PREDICT
+  libpressio_predict_version_major(); 
+#endif
+
+#if LIBPRESSIO_TOOLS_HAS_DATASET
+  pressio_dataset_major_version(); 
 #endif
 };

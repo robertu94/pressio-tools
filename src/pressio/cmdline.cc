@@ -13,6 +13,8 @@
 #include <libpressio_ext/cpp/pressio.h>
 #include <libpressio_ext/cpp/printers.h>
 #include <libpressio_ext/io/pressio_io.h>
+#include <libpressio_ext/launch/external_launch.h>
+#include <libpressio_ext/launch/external_launch_metrics.h>
 
 #include "utils/fuzzy_matcher.h"
 #include "utils/string_options.h"
@@ -23,6 +25,22 @@
 #include <mpi.h>
 #endif
 
+#if LIBPRESSIO_TOOLS_HAS_OPT
+#include <pressio_search.h>
+#include <pressio_search_metrics.h>
+#endif
+
+#if LIBPRESSIO_TOOLS_HAS_JIT
+#include <libpressio_jit_ext/cpp/generator.h>
+#endif
+
+#if LIBPRESSIO_TOOLS_HAS_PREDICT
+#include <libpressio_predict_ext/cpp/predict.h>
+#endif
+
+#if LIBPRESSIO_TOOLS_HAS_DATASET
+#include <libpressio_dataset_ext/loader.h>
+#endif
 
 namespace {
 
@@ -84,12 +102,39 @@ options:
 configuration:
 -C <option_key> prints this configuration key, defaults none, "all" prints all options
 
-compressors: )";
+)";
 
     auto* pressio = pressio_instance();
-    std::cerr << pressio_supported_compressors() << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "libpressio" << std::endl;
+    std::cerr << "compressors: " << pressio_supported_compressors() << std::endl;
     std::cerr << "io: " << pressio_supported_io_modules() << std::endl;
     std::cerr << "metrics: " << pressio_supported_metrics() << std::endl;
+    std::cerr << "launch: " << launch_plugins() << std::endl;
+    std::cerr << "launch metrics: " << launch_metrics_plugins() << std::endl;
+#if LIBPRESSIO_TOOLS_HAS_OPT
+    std::cerr << std::endl;
+    std::cerr << "libpressio-opt" << std::endl;
+    std::cerr << "search: " << search_plugins() << std::endl;
+    std::cerr << "search metrics: " << search_metrics_plugins() << std::endl;
+#endif
+#if LIBPRESSIO_TOOLS_HAS_JIT
+    std::cerr << std::endl;
+    std::cerr << "libpressio-jit" << std::endl;
+    std::cerr << "generator: " << libpressio_jit::generator_plugins() << std::endl;
+#endif
+#if LIBPRESSIO_TOOLS_HAS_PREDICT
+    std::cerr << std::endl;
+    std::cerr << "libpressio-predict" << std::endl;
+    std::cerr << "predict: " << libpressio::predict::predictor_plugins() << std::endl;
+    std::cerr << "prediction quality: " << libpressio::predict::predictor_quality_metrics_plugins() << std::endl;
+    std::cerr << "scheme: " << libpressio::predict::scheme_plugins() << std::endl;
+#endif
+#if LIBPRESSIO_TOOLS_HAS_DATASET
+    std::cerr << std::endl;
+    std::cerr << "libpressio-dataset" << std::endl;
+    std::cerr << "dataset: " << libpressio_dataset::dataset_loader_plugins() << std::endl;
+#endif
     pressio_release(pressio);
   }
 }
