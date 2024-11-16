@@ -12,6 +12,7 @@
 #include <libpressio_ext/cpp/options.h>
 #include <libpressio_ext/cpp/pressio.h>
 #include <libpressio_ext/cpp/printers.h>
+#include <libpressio_ext/cpp/domain_manager.h>
 #include <libpressio_ext/io/pressio_io.h>
 #include <libpressio_ext/launch/external_launch.h>
 #include <libpressio_ext/launch/external_launch_metrics.h>
@@ -152,7 +153,9 @@ parse_type(std::string const& optarg_s)
         return pressio_float_dtype;
       case 1:
         return pressio_double_dtype;
-      case 2: return pressio_int8_dtype; case 3:
+      case 2: 
+        return pressio_int8_dtype;
+      case 3:
         return pressio_int16_dtype;
       case 4:
         return pressio_int32_dtype;
@@ -199,7 +202,7 @@ parse_option (std::string const& option) {
 }
 
 Action parse_action(std::string const& action) {
-  std::vector<std::string> actions { "compress", "decompress", "versions", "settings", "help", "graph", "save", "load"};
+  std::vector<std::string> actions { "compress", "decompress", "versions", "settings", "help", "fullhelp", "graph", "save", "load"};
   auto id = fuzzy_match(action, std::begin(actions), std::end(actions));
   if(id) {
     switch(*id)
@@ -215,10 +218,12 @@ Action parse_action(std::string const& action) {
       case 4:
         return Action::Help;
       case 5:
-        return Action::Graph;
+        return Action::FullHelp;
       case 6:
-        return Action::SaveConfig;
+        return Action::Graph;
       case 7:
+        return Action::SaveConfig;
+      case 8:
         return Action::LoadConfig;
       default:
         (void)0;
@@ -327,7 +332,7 @@ parse_args(int argc, char* argv[])
     exit(0);
   }
 
-  while ((opt = getopt(argc, argv, "a:b:d:D:e:E:g:G:t:i:jl:I:u:U:T:f:w:s:y:z:F:W:S:Y:Z:m:M:n:N:o:pO:C:Q")) != -1) {
+  while ((opt = getopt(argc, argv, "a:b:d:D:e:E:g:G:t:i:jl:I:u:U:T:f:w:s:y:z:F:W:S:Y:Z:m:M:n:N:o:pO:C:Qr:")) != -1) {
     switch (opt) {
       case 'a':
         actions.emplace(parse_action(optarg));
@@ -425,6 +430,9 @@ parse_args(int argc, char* argv[])
       case 'Q':
         opts.qualified_prefix = "pressio";
         break;
+      case 'r':
+        domain_manager().set_options({{"domain:metrics", std::string(optarg)}});
+        break;
       case 's':
         compressed_builder.back().set_format_if("hdf5", [](std::string const& s) {return s == "posix";});
         compressed_builder.back().emplace_option("hdf5:dataset", optarg);
@@ -465,7 +473,7 @@ parse_args(int argc, char* argv[])
   if (actions.empty()) opts.actions = {Action::Compress, Action::Decompress, Action::Settings};
   else opts.actions = std::move(actions);
 
-  if(contains_one_of(opts.actions, {Action::Compress, Action::Settings, Action::Decompress, Action::Help, Action::SaveConfig, Action::LoadConfig})) {
+  if(contains_one_of(opts.actions, {Action::Compress, Action::Settings, Action::Decompress, Action::Help, Action::FullHelp, Action::SaveConfig, Action::LoadConfig})) {
     if(optind < argc) {
       opts.compressor = argv[optind++];
     }

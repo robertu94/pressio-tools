@@ -5,6 +5,7 @@ const char* compressor_template = R"cpp(
 #include "libpressio_ext/cpp/data.h"
 #include "libpressio_ext/cpp/options.h"
 #include "libpressio_ext/cpp/pressio.h"
+#include "libpressio_ext/cpp/domain_manager.h"
 
 namespace libpressio { namespace $1_ns {
 
@@ -43,14 +44,20 @@ public:
     return 0;
   }
 
-  int compress_impl(const pressio_data* input,
+  int compress_impl(const pressio_data* real_input,
                     struct pressio_data* output) override
   {
+    auto input = domain_manager().make_readable(domain_plugins().build("malloc"), *input);
+    *output = std::move(input);
+    return 0;
   }
 
-  int decompress_impl(const pressio_data* input,
+  int decompress_impl(const pressio_data* real_input,
                       struct pressio_data* output) override
   {
+    auto input = domain_manager().make_readable(domain_plugins().build("malloc"), *real_input);
+    *output = std::move(input);
+    return 0;
   }
 
   int major_version() const override { return 0; }
@@ -84,17 +91,22 @@ const char* metric_template = R"cpp(
 #include "libpressio_ext/cpp/metrics.h"
 #include "libpressio_ext/cpp/pressio.h"
 #include "libpressio_ext/cpp/options.h"
+#include "libpressio_ext/cpp/domain_manager.h"
 #include "std_compat/memory.h"
 
 namespace libpressio { namespace $1_metrics_ns {
 
 class $1_plugin : public libpressio_metrics_plugin {
   public:
-    int end_compress_impl(struct pressio_data const* input, pressio_data const* output, int) override {
+    int end_compress_impl(struct pressio_data const* real_input, pressio_data const* real_output, int) override {
+      auto input = domain_manager().make_readable(domain_plugins().build("malloc"), *real_input);
+      auto output = domain_manager().make_readable(domain_plugins().build("malloc"), *real_output);
       return 0;
     }
 
-    int end_decompress_impl(struct pressio_data const* , pressio_data const* output, int) override {
+    int end_decompress_impl(struct pressio_data const* real_input, pressio_data const* real_output, int) override {
+      auto input = domain_manager().make_readable(domain_plugins().build("malloc"), *real_input);
+      auto output = domain_manager().make_readable(domain_plugins().build("malloc"), *real_output);
       return 0;
     }
 
@@ -120,7 +132,7 @@ class $1_plugin : public libpressio_metrics_plugin {
 
   struct pressio_options get_documentation_impl() const override {
     pressio_options opt;
-    set(opt, "pressio:description", "");
+    set(opt, "pressio:description", R"()");
     return opt;
   }
 
@@ -151,6 +163,7 @@ const char* io_template = R"cpp(
 #include "libpressio_ext/cpp/io.h"
 #include "libpressio_ext/cpp/pressio.h"
 #include "libpressio_ext/cpp/options.h"
+#include "libpressio_ext/cpp/domain_manager.h"
 #include "std_compat/memory.h"
 
 namespace libpressio { namespace $1_io_ns {
@@ -161,6 +174,7 @@ class $1_plugin : public libpressio_io_plugin {
         return nullptr;
     }
   virtual int write_impl(struct pressio_data const* data) override{
+        pressio_data input = domain_manager().make_readable(domain_plugins().build("malloc"), *data);
         return 0;
     }
 

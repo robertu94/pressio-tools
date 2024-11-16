@@ -41,6 +41,10 @@
 #include <lc_libpressio.h>
 #endif
 
+#if LIBPRESSIO_TOOLS_HAS_LC_GPU
+#include <lc_gpu_libpressio.h>
+#endif
+
 #if LIBPRESSIO_TOOLS_HAS_HLRCOMPRESS
 #include <libpressio-hlrcompress.h>
 #endif
@@ -106,6 +110,10 @@ extern "C" void libpressio_register_all() {
 
 #if LIBPRESSIO_TOOLS_HAS_LC
   libpressio_register_lc();
+#endif
+
+#if LIBPRESSIO_TOOLS_HAS_LC_GPU
+  libpressio_register_lc_gpu();
 #endif
 
 #if LIBPRESSIO_TOOLS_HAS_HLRCOMPRESS

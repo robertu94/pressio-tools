@@ -1,9 +1,11 @@
 #include <algorithm>
 #include <iostream>
+#include <regex>
 #include <sstream>
 #include <string>
 #include <utility>
 #include <fstream>
+#include <set>
 
 #include <libpressio.h>
 #include <pressio_version.h>
@@ -36,7 +38,8 @@
 
 int rank = 0;
 
-void print_help(pressio_compressor & compressor) {
+void print_help(pressio_compressor & compressor, Action action) {
+    const bool is_full = (action == Action::FullHelp);
     auto docs = compressor->get_documentation();
     if(docs.key_status("pressio:description") == pressio_options_key_set) {
       std::cout << docs.get("pressio:description").get_value<std::string>() << std::endl;
@@ -47,6 +50,19 @@ void print_help(pressio_compressor & compressor) {
     auto metrics = compressor->get_metrics();
     auto metrics_results = metrics->get_metrics_results({});
     auto metrics_docs = metrics->get_documentation();
+    std::vector<std::string> highlevel;
+    configs.get("pressio:highlevel", &highlevel);
+    auto  key_is_highlevel = [&](std::string const& key){
+        return std::find(std::begin(highlevel), std::end(highlevel), key) != std::end(highlevel);
+    };
+    auto is_detail = [&](std::string const& key) {
+        return (key.contains("pressio:")
+                || key.contains("predictors:") 
+                || key.contains("composite:") 
+                || key.contains("metrics:")
+                || key.contains(compressor->prefix() + std::string(":metric"))
+                ) && !key_is_highlevel(key);
+    };
 
     std::cout <<  std::endl;
     std::cout << "Options" << std::endl;
@@ -54,6 +70,9 @@ void print_help(pressio_compressor & compressor) {
     for (auto const& i : options) {
       std::string const& key = i.first;
       pressio_option const& value = i.second;
+      if(!is_full && is_detail(key)) {
+          continue;
+      }
       pressio_option_type type = value.type();
 
       std::cout << key << " <" << type << "> ";
@@ -72,6 +91,9 @@ void print_help(pressio_compressor & compressor) {
     for (auto const& i : configs) {
       std::string const& key = i.first;
       pressio_option const& value = i.second;
+      if(!is_full && is_detail(key)) {
+          continue;
+      }
       if(skip_list.find(key) != skip_list.end())  {
         continue;
       }
@@ -88,13 +110,15 @@ void print_help(pressio_compressor & compressor) {
       std::cout << std::endl;
     }
 
-    bool any_others = false;
-    for (auto const& i : skip_list) {
-      if(!any_others) {
-        std::cout << std::endl <<  "Other Configuration" << std::endl;
-        any_others = true;
-      }
-      std::cout << i << std::endl;
+    if(is_full) {
+        bool any_others = false;
+        for (auto const& i : skip_list) {
+          if(!any_others) {
+            std::cout << std::endl <<  "Other Configuration" << std::endl;
+            any_others = true;
+          }
+          std::cout << i << std::endl;
+        }
     }
 
     bool any_metrics = false;
@@ -132,37 +156,43 @@ void print_versions(pressio& library) {
 template <class ForwardIt>
 void print_selected_options(pressio_options const& options, ForwardIt begin, ForwardIt end, OutputFormat format = OutputFormat::Human) {
   if(rank == 0) {
+      std::vector<std::string> keys;
+      std::set<std::string> matched_keys;
+      std::transform(options.begin(), options.end(),
+              std::back_inserter(keys),
+              [](auto i) { return i.first; });
+      if(std::find(begin, end, std::string("all")) != end) {
+        std::copy(keys.begin(), keys.end(), std::inserter(matched_keys, matched_keys.begin()));
+      } else {
+        std::for_each(begin, end, [&](std::string const& pattern) {
+            std::regex r{pattern};
+            std::copy_if(keys.begin(), keys.end(), std::inserter(matched_keys, matched_keys.begin()), [&](std::string const& key) {
+                        return std::regex_search(key, r);
+                    });
+        });
+      }
   switch(format) {
     case OutputFormat::Human:
       std::for_each(
-          begin,
-          end,
-          [options](std::string const option){
-            if (option == "all") {
-              std::cerr << (options);
-            } else { 
+          matched_keys.begin(),
+          matched_keys.end(),
+          [options](std::string const key){
               try {
-                std::cerr << option << options.get(option) << std::endl;
+                std::cerr << key << options.get(key) << std::endl;
               } catch(std::out_of_range const&) {
                 std::cerr << ": option is unknown" << std::endl;
                 exit(EXIT_FAILURE);
               }
-            }
           });
         break;
       case OutputFormat::JSON:
 #if LIBPRESSIO_HAS_JSON
         pressio_options for_json;
-        if(begin != end) {
-          if(std::find(begin, end, std::string("all")) != end) {
-            for_json = options;
-          } else {
-            for(auto current = begin; current != end; ++current) {
-              auto key = *current;
+        if(!matched_keys.empty()) {
+            for(std::string const& key : matched_keys) {
               pressio_option const& value = options.get(key);
               for_json.set(key, value);
             }
-          }
           char* json = pressio_options_to_json(nullptr, &for_json);
           std::cout << json << std::endl;
           free(json);
@@ -353,7 +383,7 @@ main(int argc, char* argv[])
       print_versions(library);
     }
 
-    if (contains_one_of(opts.actions, {Action::Compress, Action::Decompress, Action::Settings, Action::Help, Action::Graph, Action::SaveConfig, Action::LoadConfig})) {
+    if (contains_one_of(opts.actions, {Action::Compress, Action::Decompress, Action::Settings, Action::Help, Action::Graph, Action::SaveConfig, Action::LoadConfig, Action::FullHelp})) {
 
       auto compressor = setup_compressor(library, opts);
       auto options = compressor->get_options();
@@ -361,8 +391,10 @@ main(int argc, char* argv[])
       std::vector<pressio_data> compressed;
       std::vector<pressio_data> decompressed;
 
-      if (contains(opts.actions, Action::Help)) {
-        print_help(compressor);
+      if (contains(opts.actions, Action::FullHelp)) {
+        print_help(compressor, Action::FullHelp);
+      } else if (contains(opts.actions, Action::Help)) {
+        print_help(compressor, Action::Help);
       }
 
       if (contains(opts.actions, Action::Settings)) {

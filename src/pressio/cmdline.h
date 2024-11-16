@@ -26,6 +26,7 @@ enum class Action
   LoadConfig,
   Settings,
   Help,
+  FullHelp,
   Graph
 };
 
