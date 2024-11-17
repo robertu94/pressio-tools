@@ -316,7 +316,7 @@ parse_args(int argc, char* argv[])
 #endif
   int opt;
   cmdline_options opts;
-#if (LIBPRESSIO_MAJOR_VERSION > 1) || (LIBPRESSIO_MAJOR_VERSION == 0  && LIBPRESSIO_MINOR_VERSION > 75)
+#if (LIBPRESSIO_MAJOR_VERSION >= 1) || (LIBPRESSIO_MAJOR_VERSION == 0  && LIBPRESSIO_MINOR_VERSION > 75)
   opts.compressor = "pressio";
 #else
   opts.compressor = "noop";
