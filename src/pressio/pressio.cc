@@ -56,11 +56,11 @@ void print_help(pressio_compressor & compressor, Action action) {
         return std::find(std::begin(highlevel), std::end(highlevel), key) != std::end(highlevel);
     };
     auto is_detail = [&](std::string const& key) {
-        return (key.contains("pressio:")
-                || key.contains("predictors:") 
-                || key.contains("composite:") 
-                || key.contains("metrics:")
-                || key.contains(compressor->prefix() + std::string(":metric"))
+        return (key.find("pressio:") != std::string::npos
+                || key.find("predictors:") != std::string::npos
+                || key.find("composite:") != std::string::npos
+                || key.find("metrics:")!= std::string::npos
+                || key.find(compressor->prefix() + std::string(":metric")) != std::string::npos
                 ) && !key_is_highlevel(key);
     };
 
