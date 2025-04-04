@@ -37,6 +37,8 @@
 
 #if LIBPRESSIO_TOOLS_HAS_PREDICT
 #include <libpressio_predict_ext/cpp/predict.h>
+#include <libpressio_predict_ext/cpp/scheme.h>
+#include <libpressio_predict_ext/cpp/predict_metrics.h>
 #endif
 
 #if LIBPRESSIO_TOOLS_HAS_DATASET
