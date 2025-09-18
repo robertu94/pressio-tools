@@ -21,6 +21,7 @@
 #include "utils/string_options.h"
 #include "utils/pressio_tools_version.h"
 #include "options.h"
+using namespace libpressio;
 
 #if LIBPRESSIO_TOOLS_HAS_MPI
 #include <mpi.h>
@@ -118,8 +119,8 @@ configuration:
 #if LIBPRESSIO_TOOLS_HAS_OPT
     std::cerr << std::endl;
     std::cerr << "libpressio-opt" << std::endl;
-    std::cerr << "search: " << search_plugins() << std::endl;
-    std::cerr << "search metrics: " << search_metrics_plugins() << std::endl;
+    std::cerr << "search: " << libpressio_opt::search::search_plugins() << std::endl;
+    std::cerr << "search metrics: " << libpressio_opt::search_metrics::search_metrics_plugins() << std::endl;
 #endif
 #if LIBPRESSIO_TOOLS_HAS_JIT
     std::cerr << std::endl;

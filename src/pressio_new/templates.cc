@@ -7,7 +7,7 @@ const char* compressor_template = R"cpp(
 #include "libpressio_ext/cpp/pressio.h"
 #include "libpressio_ext/cpp/domain_manager.h"
 
-namespace libpressio { namespace $1_ns {
+namespace libpressio { namespace compressors { namespace $1_ns {
 
 class $1_compressor_plugin : public libpressio_compressor_plugin {
 public:
@@ -47,7 +47,7 @@ public:
   int compress_impl(const pressio_data* real_input,
                     struct pressio_data* output) override
   {
-    auto input = domain_manager().make_readable(domain_plugins().build("malloc"), *input);
+    auto input = domain_manager().make_readable(domain_plugins().build("malloc"), *real_input);
     *output = std::move(input);
     return 0;
   }
@@ -77,11 +77,11 @@ public:
 
 };
 
-static pressio_register compressor_many_fields_plugin(compressor_plugins(), "$1", []() {
+static pressio_register libpressio_compressor_$1_plugin(compressor_plugins(), "$1", []() {
   return compat::make_unique<$1_compressor_plugin>();
 });
 
-} }
+} } }
 )cpp";
 
 const char* metric_template = R"cpp(
@@ -94,7 +94,7 @@ const char* metric_template = R"cpp(
 #include "libpressio_ext/cpp/domain_manager.h"
 #include "std_compat/memory.h"
 
-namespace libpressio { namespace $1_metrics_ns {
+namespace libpressio { namespace metrics { namespace $1_metrics_ns {
 
 class $1_plugin : public libpressio_metrics_plugin {
   public:
@@ -152,8 +152,8 @@ class $1_plugin : public libpressio_metrics_plugin {
 
 };
 
-static pressio_register metrics_$1_plugin(metrics_plugins(), "$1", [](){ return compat::make_unique<$1_plugin>(); });
-}}
+static pressio_register libpressio_metrics_$1_plugin(metrics_plugins(), "$1", [](){ return compat::make_unique<$1_plugin>(); });
+}}}
 )cpp";
 
 const char* io_template = R"cpp(
@@ -166,7 +166,7 @@ const char* io_template = R"cpp(
 #include "libpressio_ext/cpp/domain_manager.h"
 #include "std_compat/memory.h"
 
-namespace libpressio { namespace $1_io_ns {
+namespace libpressio { namespace io { namespace $1_io_ns {
 
 class $1_plugin : public libpressio_io_plugin {
   public:
@@ -220,7 +220,7 @@ class $1_plugin : public libpressio_io_plugin {
 };
 
 static pressio_register io_$1_plugin(io_plugins(), "$1", [](){ return compat::make_unique<$1_plugin>(); });
-}}
+}}}
 )cpp";
 
 const char* search_template = R"cpp(
@@ -228,6 +228,7 @@ const char* search_template = R"cpp(
 #include "pressio_search_results.h"
 #include <std_compat/memory.h>
 
+namespace libpressio_opt { namespace search {
 struct $1_search: public pressio_search_plugin {
   public:
     pressio_search_results search(compat::span<const pressio_data *const> const &input_datas,
@@ -265,7 +266,8 @@ private:
 };
 
 
-static pressio_register $1_register(search_plugins(), "$1", [](){ return compat::make_unique<$1_search>();});
+static pressio_register libpressio_io_$1_register(search_plugins(), "$1", [](){ return compat::make_unique<$1_search>();});
+}}
 
 )cpp";
 const char* searchmetric_template = R"cpp(
@@ -276,6 +278,7 @@ const char* searchmetric_template = R"cpp(
 #include "pressio_search_results.h"
 #include <std_compat/memory.h>
 
+namespace libpressio_opt { namespace libpressio search_metrics {
 struct $1_search_metric : public pressio_search_metrics_plugin {
 
   $1_search_metric() {
@@ -303,7 +306,8 @@ struct $1_search_metric : public pressio_search_metrics_plugin {
   }
 };
 
-static pressio_register X_$1(search_metrics_plugins(), "$1", [](){ return compat::make_unique<$1_search_metric>();});
+static pressio_register io_$1_plugin(search_metrics_plugins(), "$1", [](){ return compat::make_unique<$1_search_metric>();});
+} }
 )cpp";
 
 
@@ -360,7 +364,7 @@ namespace libpressio_dataset { namespace $1_loader_ns {
 
   };
 
-  pressio_register $1_loader_register(dataset_loader_plugins(), "$1", []{ return compat::make_unique<$1_loader>(); });
+  pressio_register libpressio_loader_$1_register(dataset_loader_plugins(), "$1", []{ return compat::make_unique<$1_loader>(); });
 }}
 )cpp";
 
@@ -369,8 +373,10 @@ const char* cpp_client = R"cpp(
 #include <libpressio_meta.h>
 #include <iostream>
 #include <string>
+#include <memory>
 
 using namespace std::string_literals;
+using namespace libpressio;
 
 int main() {
 	pressio library;
@@ -392,7 +398,7 @@ int main() {
         std::cerr << io->error_msg() << std::endl;
         exit(io->error_code());
     }
-	pressio_data* input = io->read(&metadata);
+	std::unique_ptr<pressio_data> input = io->read(&metadata);
 	pressio_data compressed = pressio_data::empty(pressio_byte_dtype, {});
 	pressio_data output = pressio_data::owning(type, dims);
 
@@ -404,7 +410,7 @@ int main() {
         exit(io->error_code());
     }
 
-	if(compressor->compress(input, &compressed) != 0) {
+	if(compressor->compress(input.get(), &compressed) != 0) {
 		std::cerr << compressor->error_msg() << std::endl;
 		exit(compressor->error_code());
 	}
@@ -414,7 +420,6 @@ int main() {
 	}
 
   std::cout << compressor->get_metrics_results() << std::endl;
-	delete input;
 }
 )cpp";
 

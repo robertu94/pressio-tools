@@ -6,7 +6,8 @@
 #include <map>
 #include "options.h"
 
-int set_options_from_multimap(pressio_configurable& c, std::multimap<std::string,std::string> const& user_options, const char* configurable_type, compat::optional<pressio_options>& out) {
+
+int set_options_from_multimap(libpressio::pressio_configurable& c, std::multimap<std::string,std::string> const& user_options, const char* configurable_type, compat::optional<pressio_options>& out) {
   pressio_options configurable_options = c.get_options();
   pressio_options new_options;
   auto presssio_user_opts = options_from_multimap(user_options);

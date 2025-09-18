@@ -37,6 +37,7 @@
 #include "graph.h"
 
 int rank = 0;
+using namespace libpressio;
 
 void print_help(pressio_compressor & compressor, Action action) {
     const bool is_full = (action == Action::FullHelp);

@@ -7,7 +7,7 @@
 #include <memory>
 #include <functional>
 #include <algorithm>
-#include <libpressio/pressio_version.h>
+#include <pressio_version.h>
 #include <pressio_data.h>
 #include <libpressio_ext/io/pressio_io.h>
 #include <libpressio_ext/cpp/data.h>
